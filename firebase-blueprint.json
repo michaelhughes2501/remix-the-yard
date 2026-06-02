@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "facility": { "type": "string" },
+        "location": { "type": "string" },
+        "bio": { "type": "string" },
+        "is_mentor": { "type": "boolean" },
+        "hide_location": { "type": "boolean" },
+        "hide_history": { "type": "boolean" },
+        "is_admin": { "type": "boolean" },
+        "role": { "type": "string" },
+        "is_suspended": { "type": "boolean" }
+      },
+      "required": ["id", "username", "email"]
+    },
+    "Thread": {
+      "title": "Thread",
+      "description": "Forum thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "author_id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "is_flagged": { "type": "boolean" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "author_id", "title", "content", "category"]
+    },
+    "Reply": {
+      "title": "Reply",
+      "description": "Forum thread reply",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "thread_id": { "type": "string" },
+        "author_id": { "type": "string" },
+        "content": { "type": "string" },
+        "is_flagged": { "type": "boolean" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "thread_id", "author_id", "content"]
+    },
+    "Kite": {
+      "title": "Kite",
+      "description": "Direct message between users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender_id": { "type": "string" },
+        "receiver_id": { "type": "string" },
+        "content": { "type": "string" },
+        "is_read": { "type": "boolean" },
+        "read_at": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "sender_id", "receiver_id", "content"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Vault storage file",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "file_name": { "type": "string" },
+        "file_type": { "type": "string" },
+        "file_data": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "user_id", "title", "category", "file_name", "file_type", "file_data"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Felony-friendly job listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "is_felony_friendly": { "type": "boolean" },
+        "posted_by": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "title", "company", "location", "description"]
+    },
+    "Housing": {
+      "title": "Housing",
+      "description": "Sober living/transitional housing listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "location": { "type": "string" },
+        "contact_info": { "type": "string" },
+        "description": { "type": "string" },
+        "posted_by": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "name", "type", "location", "description"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "link": { "type": "string" },
+        "is_read": { "type": "boolean" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "user_id", "type", "content"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "threads/{threadId}": {
+      "schema": "Thread",
+      "description": "Forum threads"
+    },
+    "threads/{threadId}/replies/{replyId}": {
+      "schema": "Reply",
+      "description": "Forum thread replies"
+    },
+    "kites/{kiteId}": {
+      "schema": "Kite",
+      "description": "Direct message kites"
+    },
+    "documents/{docId}": {
+      "schema": "Document",
+      "description": "Uploaded vault documents"
+    },
+    "jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job board listings"
+    },
+    "housing/{houseId}": {
+      "schema": "Housing",
+      "description": "Housing directory options"
+    },
+    "notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "User updates and notifications"
+    }
+  }
+}

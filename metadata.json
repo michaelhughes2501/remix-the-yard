@@ -1,0 +1,10 @@
+{
+  "name": "Remix: The Yard",
+  "description": "A social and utility platform for the formerly incarcerated to connect, find resources, and navigate life after prison.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

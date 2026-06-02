@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Pillar 1/4)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- PHASE 3: PRIMITIVE DEFINITIONS & ADVANCED HELPERS ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role-based access lookups (Pillar 4)
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- VALIDATION BLUEPRINTS (Pillar 2 / Anti-Update-Gap) ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'username', 'email'])
+        && data.keys().size() <= 12
+        && data.id is string && data.id.size() <= 128
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 50
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 100
+        && (!data.keys().hasAny(['facility']) || (data.facility is string && data.facility.size() <= 100))
+        && (!data.keys().hasAny(['location']) || (data.location is string && data.location.size() <= 100))
+        && (!data.keys().hasAny(['bio']) || (data.bio is string && data.bio.size() <= 1000))
+        && (!data.keys().hasAny(['is_mentor']) || data.is_mentor is bool)
+        && (!data.keys().hasAny(['hide_location']) || data.hide_location is bool)
+        && (!data.keys().hasAny(['hide_history']) || data.hide_history is bool)
+        && (!data.keys().hasAny(['is_admin']) || data.is_admin is bool)
+        && (!data.keys().hasAny(['role']) || (data.role is string && data.role.size() <= 20))
+        && (!data.keys().hasAny(['is_suspended']) || data.is_suspended is bool);
+    }
+
+    function isValidThread(data) {
+      return data.keys().hasAll(['id', 'author_id', 'title', 'content', 'category'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.author_id is string && data.author_id.size() <= 128
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 150
+        && data.content is string && data.content.size() >= 5 && data.content.size() <= 10000
+        && data.category is string && data.category.size() <= 50
+        && (!data.keys().hasAny(['is_flagged']) || data.is_flagged is bool)
+        && (!data.keys().hasAny(['timestamp']) || (data.timestamp is string && data.timestamp.size() <= 50));
+    }
+
+    function isValidReply(data) {
+      return data.keys().hasAll(['id', 'thread_id', 'author_id', 'content'])
+        && data.keys().size() <= 6
+        && data.id is string && data.id.size() <= 128
+        && data.thread_id is string && data.thread_id.size() <= 128
+        && data.author_id is string && data.author_id.size() <= 128
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 5000
+        && (!data.keys().hasAny(['is_flagged']) || data.is_flagged is bool)
+        && (!data.keys().hasAny(['timestamp']) || (data.timestamp is string && data.timestamp.size() <= 50));
+    }
+
+    function isValidKite(data) {
+      return data.keys().hasAll(['id', 'sender_id', 'receiver_id', 'content'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.sender_id is string && data.sender_id.size() <= 128
+        && data.receiver_id is string && data.receiver_id.size() <= 128
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 5000
+        && (!data.keys().hasAny(['is_read']) || data.is_read is bool)
+        && (!data.keys().hasAny(['read_at']) || (data.read_at is string && data.read_at.size() <= 50))
+        && (!data.keys().hasAny(['timestamp']) || (data.timestamp is string && data.timestamp.size() <= 50));
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['id', 'user_id', 'title', 'category', 'file_name', 'file_type', 'file_data'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.user_id is string && data.user_id.size() <= 128
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.category is string && data.category.size() <= 50
+        && data.file_name is string && data.file_name.size() <= 255
+        && data.file_type is string && data.file_type.size() <= 100
+        && data.file_data is string && data.file_data.size() <= 15000000 // limit payload sizes as guard (PII details/base64)
+        && (!data.keys().hasAny(['created_at']) || (data.created_at is string && data.created_at.size() <= 50));
+    }
+
+    function isValidJob(data) {
+      return data.keys().hasAll(['id', 'title', 'company', 'location', 'description'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 150
+        && data.company is string && data.company.size() >= 2 && data.company.size() <= 150
+        && data.location is string && data.location.size() >= 5 && data.location.size() <= 150
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 5000
+        && (!data.keys().hasAny(['is_felony_friendly']) || data.is_felony_friendly is bool)
+        && (!data.keys().hasAny(['posted_by']) || (data.posted_by is string && data.posted_by.size() <= 128))
+        && (!data.keys().hasAny(['created_at']) || (data.created_at is string && data.created_at.size() <= 50));
+    }
+
+    function isValidHousing(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'location', 'description'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 200
+        && data.type is string && data.type.size() <= 50
+        && data.location is string && data.location.size() >= 5 && data.location.size() <= 250
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 5000
+        && (!data.keys().hasAny(['contact_info']) || (data.contact_info is string && data.contact_info.size() <= 200))
+        && (!data.keys().hasAny(['posted_by']) || (data.posted_by is string && data.posted_by.size() <= 128))
+        && (!data.keys().hasAny(['created_at']) || (data.created_at is string && data.created_at.size() <= 50));
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'user_id', 'type', 'content'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.user_id is string && data.user_id.size() <= 128
+        && data.type is string && data.type.size() <= 50
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 500
+        && (!data.keys().hasAny(['link']) || (data.link is string && data.link.size() <= 250))
+        && (!data.keys().hasAny(['is_read']) || data.is_read is bool)
+        && (!data.keys().hasAny(['timestamp']) || (data.timestamp is string && data.timestamp.size() <= 50));
+    }
+
+    // --- COLLECTION RULE GROUPS ---
+
+    // USERS COLLECTION (Pillar 6: Split authentication / profile isolation)
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Users can see lists of profiles for connecting/messaging
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      
+      // Tiered update logic (Pillar 4)
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        // Prevent users from escalating their own privileges
+        incoming().role == existing().role
+        && incoming().is_admin == existing().is_admin
+        && incoming().is_suspended == existing().is_suspended
+      ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // THREADS COLLECTION
+    match /threads/{threadId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidThread(incoming()) && isOwner(incoming().author_id);
+      
+      allow update: if isSignedIn() && isValidThread(incoming()) && (
+        isOwner(existing().author_id) && incoming().author_id == existing().author_id && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'category'])
+        || (incoming().diff(existing()).affectedKeys().hasOnly(['is_flagged'])) // Anyone can flag a thread
+      ) || isAdmin();
+      
+      allow delete: if isAdmin();
+
+      // REPLIES ACTION SUB-COLLECTION (Pillar 1: Relational sync parent gate)
+      match /replies/{replyId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && isValidReply(incoming()) && isOwner(incoming().author_id)
+          && exists(/databases/$(database)/documents/threads/$(threadId)); // Ensure thread exists
+          
+        allow update: if isSignedIn() && isValidReply(incoming()) && (
+          isOwner(existing().author_id) && incoming().author_id == existing().author_id && incoming().diff(existing()).affectedKeys().hasOnly(['content'])
+          || (incoming().diff(existing()).affectedKeys().hasOnly(['is_flagged'])) // Anyone can flag a reply
+        ) || isAdmin();
+        
+        allow delete: if isAdmin();
+      }
+    }
+
+    // KITES (Pillar 8: Secure List Queries check sender/receiver)
+    match /kites/{kiteId} {
+      allow get: if isSignedIn() && (isOwner(existing().sender_id) || isOwner(existing().receiver_id));
+      allow list: if isSignedIn() && (resource.data.sender_id == request.auth.uid || resource.data.receiver_id == request.auth.uid);
+      
+      allow create: if isSignedIn() && isValidKite(incoming()) && isOwner(incoming().sender_id);
+      
+      allow update: if isSignedIn() && isValidKite(incoming()) && (
+        // Receiver can mark as read
+        isOwner(existing().receiver_id) && incoming().diff(existing()).affectedKeys().hasOnly(['is_read', 'read_at'])
+      ) || isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+
+    // DOCUMENTS
+    match /documents/{docId} {
+      allow get: if isSignedIn() && isOwner(existing().user_id);
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidDocument(incoming()) && isOwner(incoming().user_id);
+      allow update: if isSignedIn() && isValidDocument(incoming()) && isOwner(existing().user_id) && incoming().user_id == existing().user_id;
+      allow delete: if isSignedIn() && isOwner(existing().user_id) || isAdmin();
+    }
+
+    // JOBS
+    match /jobs/{jobId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidJob(incoming()) && isOwner(incoming().posted_by);
+      allow update: if isSignedIn() && isValidJob(incoming()) && (isOwner(existing().posted_by) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(existing().posted_by) || isAdmin());
+    }
+
+    // HOUSING
+    match /housing/{houseId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidHousing(incoming()) && isOwner(incoming().posted_by);
+      allow update: if isSignedIn() && isValidHousing(incoming()) && (isOwner(existing().posted_by) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(existing().posted_by) || isAdmin());
+    }
+
+    // NOTIFICATIONS
+    match /notifications/{notifId} {
+      allow get: if isSignedIn() && isOwner(existing().user_id);
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidNotification(incoming()); // Any participant or system can create a notification for another user
+      allow update: if isSignedIn() && isValidNotification(incoming()) && isOwner(existing().user_id) && incoming().diff(existing()).affectedKeys().hasOnly(['is_read']);
+      allow delete: if isSignedIn() && isOwner(existing().user_id) || isAdmin();
+    }
+  }
+}

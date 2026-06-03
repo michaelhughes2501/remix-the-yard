@@ -218,6 +218,16 @@ db.exec(`
     FOREIGN KEY(receiver_id) REFERENCES users(id),
     UNIQUE(requester_id, receiver_id)
   );
+  CREATE TABLE IF NOT EXISTS case_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    event_date TEXT,
+    category TEXT DEFAULT 'General',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
 `);
 
 async function startServer() {
@@ -1029,6 +1039,52 @@ async function startServer() {
     db.prepare("DELETE FROM replies WHERE thread_id = ?").run(req.params.id);
     db.prepare("DELETE FROM threads WHERE id = ?").run(req.params.id);
     res.json({ success: true });
+  });
+
+  // --- Case Tracker ---
+  app.get("/api/cases", requireAuth, (req: any, res) => {
+    const events = db.prepare("SELECT * FROM case_events WHERE user_id = ? ORDER BY event_date DESC, created_at DESC").all(req.userId);
+    res.json(events);
+  });
+
+  app.post("/api/cases", requireAuth, (req: any, res) => {
+    const { title, description, event_date, category } = req.body;
+    if (!title) return res.status(400).json({ error: "Missing fields" });
+    const id = crypto.randomUUID();
+    db.prepare("INSERT INTO case_events (id, user_id, title, description, event_date, category) VALUES (?, ?, ?, ?, ?, ?)").run(
+      id, req.userId, title, description, event_date, category || "General"
+    );
+    const event = db.prepare("SELECT * FROM case_events WHERE id = ?").get(id);
+    res.status(201).json(event);
+  });
+
+  app.delete("/api/cases/:id", requireAuth, (req: any, res) => {
+    db.prepare("DELETE FROM case_events WHERE id = ? AND user_id = ?").run(req.params.id, req.userId);
+    res.json({ success: true });
+  });
+
+  // --- AI Assistant ---
+  app.post("/api/assistant", async (req: any, res) => {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "No message provided" });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.json({ reply: "I'm here to help with reentry resources, housing, jobs, legal aid, and community support. What do you need?" });
+    }
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `You are a supportive assistant for The Yard — a community platform for formerly incarcerated people. Help with reentry: housing, jobs, legal aid, mental health, peer connection. Be warm and practical. Keep responses under 3 sentences.\n\nUser: ${message}` }] }]
+        })
+      });
+      const data = await response.json() as any;
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help — ask me about housing, jobs, legal resources, or community support.";
+      res.json({ reply });
+    } catch {
+      res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });
+    }
   });
 
   // Vite middleware for development

@@ -7,3 +7,45 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* ── Editorial / brutalist motion primitives ──────────────── */
+@keyframes yard-marquee-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+@keyframes yard-sheen {
+  0%   { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%) skewX(-12deg); }
+}
+@keyframes yard-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes yard-grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 44px 44px; }
+}
+
+.yard-marquee { animation: yard-marquee-up 22s linear infinite; }
+.yard-rise { animation: yard-rise .7s cubic-bezier(.2,.7,.2,1) both; }
+
+/* Faint engraved grid texture for dark panels */
+.yard-grid {
+  background-image:
+    linear-gradient(to right, rgba(228,227,224,.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(228,227,224,.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: yard-grid-drift 30s linear infinite;
+}
+
+/* Light sweep used on the primary CTA */
+.yard-sheen { position: relative; overflow: hidden; }
+.yard-sheen::after {
+  content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(228,227,224,.35), transparent);
+  animation: yard-sheen 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yard-marquee, .yard-grid, .yard-sheen::after { animation: none; }
+}
+

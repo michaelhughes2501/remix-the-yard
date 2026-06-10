@@ -89,7 +89,7 @@ export default function Auth() {
         {/* vertical scrolling manifesto */}
         <div className="absolute right-6 top-0 bottom-0 w-px bg-[#E4E3E0]/10" />
         <div className="absolute right-10 top-0 bottom-0 overflow-hidden pointer-events-none select-none">
-          <div className="yard-marquee flex flex-col gap-10 text-right">
+          <div className="yard-marquee flex flex-col gap-10 pb-10 text-right">
             {[...MANIFESTO, ...MANIFESTO].map((w, i) => (
               <span key={i} className="font-serif italic text-5xl lg:text-6xl leading-none opacity-[0.07] whitespace-nowrap">{w}</span>
             ))}
@@ -149,10 +149,10 @@ export default function Auth() {
         </div>
         <div className="hidden md:block mb-8">
           <h2 className="text-3xl font-serif italic tracking-tight">
-            {view === 'login' && 'Welcome back'}
-            {view === 'register' && 'Join The Yard'}
-            {view === 'forgot' && 'Reset access'}
-            {view === 'reset' && 'Set a new password'}
+            {view === 'login' ? 'Welcome back' :
+             view === 'register' ? 'Join The Yard' :
+             view === 'forgot' ? 'Reset access' :
+             'Set a new password'}
           </h2>
           <p className="text-xs uppercase tracking-widest opacity-50 mt-2">
             {view === 'login' ? 'Sign in to your account' : view === 'register' ? 'Create your free account' : 'We’ll get you back in'}

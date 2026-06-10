@@ -46,6 +46,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .yard-marquee, .yard-grid, .yard-sheen::after { animation: none; }
+  .yard-marquee, .yard-grid, .yard-sheen::after, .yard-rise { animation: none; }
 }
 

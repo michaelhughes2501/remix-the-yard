@@ -1,9 +1,9 @@
 {
-  "projectId": "planning-with-ai-45ef8",
-  "appId": "1:713645444671:web:c4c23e8ecd01106591b28a",
+  "projectId": "your-firebase-project-id",
+  "appId": "your-firebase-app-id",
   "apiKey": "your-firebase-web-api-key",
-  "authDomain": "planning-with-ai-45ef8.firebaseapp.com",
-  "storageBucket": "planning-with-ai-45ef8.firebasestorage.app",
-  "messagingSenderId": "713645444671",
+  "authDomain": "your-project.firebaseapp.com",
+  "storageBucket": "your-project.firebasestorage.app",
+  "messagingSenderId": "your-messaging-sender-id",
   "measurementId": ""
 }

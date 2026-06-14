@@ -1,7 +1,23 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import fallbackConfig from '../../firebase-applet-config.json';
+
+// Firebase web config. A Firebase web apiKey is a client-public identifier — it
+// ships in the browser bundle and is not a secret on its own (access is gated by
+// Firebase Security Rules / App Check). We still read it from gitignored
+// VITE_FIREBASE_* env vars so the public repo carries only placeholders; the
+// committed JSON is a no-op fallback that keeps the build compiling.
+const env = import.meta.env as Record<string, string | undefined>;
+const firebaseConfig = {
+  apiKey: env.VITE_FIREBASE_API_KEY ?? fallbackConfig.apiKey,
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN ?? fallbackConfig.authDomain,
+  projectId: env.VITE_FIREBASE_PROJECT_ID ?? fallbackConfig.projectId,
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET ?? fallbackConfig.storageBucket,
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? fallbackConfig.messagingSenderId,
+  appId: env.VITE_FIREBASE_APP_ID ?? fallbackConfig.appId,
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID ?? fallbackConfig.measurementId,
+};
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);

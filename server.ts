@@ -237,7 +237,30 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
-  app.use(helmet({ contentSecurityPolicy: false }));
+  app.set("trust proxy", 1);
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://generativelanguage.googleapis.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+          ...(process.env.NODE_ENV !== "production" ? ["ws:", "wss:"] : []),
+        ],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
+    },
+  }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -252,12 +275,14 @@ async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+    skip: (req: express.Request) => req.originalUrl.startsWith("/api/auth/"),
   });
 
-  app.use("/api/", generalLimiter);
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
+  app.use("/api/", generalLimiter);
 
   // Auth Middleware
   const requireAuth = (req: any, res: any, next: any) => {
@@ -333,7 +358,7 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
-      // TODO: send reset email. Token is logged to console only in development.
+      // Wire up an email provider here before going to production.
       if (process.env.NODE_ENV !== "production") {
         console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
       }

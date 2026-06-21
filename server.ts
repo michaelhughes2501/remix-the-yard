@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,6 +237,27 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many attempts, please try again later." },
+  });
+
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.use("/api/", generalLimiter);
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/register", authLimiter);
+  app.use("/api/auth/forgot-password", authLimiter);
 
   // Auth Middleware
   const requireAuth = (req: any, res: any, next: any) => {
@@ -310,9 +333,11 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
-      // In a real app, send an email here. For this environment, we'll return it in the response for testing/demo purposes.
-      console.log(`Password reset token for ${email}: ${resetToken}`);
-      res.json({ success: true, message: "If an account exists, a reset link has been sent.", _devToken: resetToken });
+      // TODO: send reset email. Token is logged to console only in development.
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
+      }
+      res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
       // Always return success to prevent email enumeration
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
@@ -1064,7 +1089,7 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
-  app.post("/api/assistant", async (req: any, res) => {
+  app.post("/api/assistant", requireAuth, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     const apiKey = process.env.GEMINI_API_KEY;

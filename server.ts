@@ -271,7 +271,6 @@ async function startServer() {
   });
 
   const generalLimiter = rateLimit({
-  const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
     standardHeaders: true,
@@ -283,7 +282,6 @@ async function startServer() {
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
-  app.use("/api/", generalLimiter);
   app.use("/api/", generalLimiter);
 
   // Auth Middleware

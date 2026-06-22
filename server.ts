@@ -271,17 +271,19 @@ async function startServer() {
   });
 
   const generalLimiter = rateLimit({
+  const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests, please try again later." },
-    skip: (req: express.Request) => req.originalUrl.startsWith("/api/auth/"),
+    skip: (req) => req.originalUrl.startsWith("/api/auth/"),
   });
 
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
+  app.use("/api/", generalLimiter);
   app.use("/api/", generalLimiter);
 
   // Auth Middleware

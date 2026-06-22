@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -234,7 +236,18 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(helmet({
+    contentSecurityPolicy: false, // Vite HMR requires relaxed CSP in dev; tighten in production
+  }));
   app.use(express.json({ limit: '50mb' }));
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  });
 
   // Auth Middleware
   const requireAuth = (req: any, res: any, next: any) => {
@@ -259,7 +272,7 @@ async function startServer() {
   });
 
   // Auth Routes
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", authLimiter, (req, res) => {
     const { username, email, password, facility, location, bio } = req.body;
     try {
       const id = crypto.randomUUID();
@@ -272,7 +285,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", authLimiter, (req, res) => {
     const { username, password } = req.body;
     const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
@@ -310,9 +323,9 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
-      // In a real app, send an email here. For this environment, we'll return it in the response for testing/demo purposes.
+      // In production, send reset link via email. Token is logged server-side only.
       console.log(`Password reset token for ${email}: ${resetToken}`);
-      res.json({ success: true, message: "If an account exists, a reset link has been sent.", _devToken: resetToken });
+      res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
       // Always return success to prevent email enumeration
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
@@ -547,7 +560,7 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  app.get("/api/avatar/:docId", (req: any, res) => {
+  app.get("/api/avatar/:docId", requireAuth, (req: any, res) => {
     try {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
@@ -1064,7 +1077,7 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
-  app.post("/api/assistant", async (req: any, res) => {
+  app.post("/api/assistant", requireAuth, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     const apiKey = process.env.GEMINI_API_KEY;

@@ -236,14 +236,33 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
   app.use(helmet({
-    contentSecurityPolicy: false, // Vite HMR requires relaxed CSP in dev; tighten in production
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
   }));
   app.use(express.json({ limit: '50mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  });
+
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  });
+
+  const mediaLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests, please try again later." },
@@ -323,8 +342,10 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
-      // In production, send reset link via email. Token is logged server-side only.
-      console.log(`Password reset token for ${email}: ${resetToken}`);
+      // In production, send reset link via email. Log token in dev only (never in prod logs).
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`Password reset token for ${email}: ${resetToken}`);
+      }
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
       // Always return success to prevent email enumeration
@@ -560,7 +581,7 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  app.get("/api/avatar/:docId", requireAuth, (req: any, res) => {
+  app.get("/api/avatar/:docId", requireAuth, mediaLimiter, (req: any, res) => {
     try {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
@@ -1077,7 +1098,7 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
-  app.post("/api/assistant", requireAuth, async (req: any, res) => {
+  app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     const apiKey = process.env.GEMINI_API_KEY;

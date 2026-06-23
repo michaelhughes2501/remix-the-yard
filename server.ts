@@ -8,6 +8,8 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -241,6 +243,31 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(express.json({ limit: '50mb' }));
+  app.set("trust proxy", 1);
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://generativelanguage.googleapis.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+          ...(process.env.NODE_ENV !== "production" ? ["ws:", "wss:"] : []),
+        ],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
+    },
+  }));
   if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
@@ -254,6 +281,22 @@ async function startServer() {
     max: 20,
     standardHeaders: true,
     legacyHeaders: false,
+    message: { error: "Too many attempts, please try again later." },
+  });
+
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+    skip: (req) => req.originalUrl.startsWith("/api/auth/"),
+  });
+
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/register", authLimiter);
+  app.use("/api/auth/forgot-password", authLimiter);
+  app.use("/api/", generalLimiter);
     message: { error: "Too many requests, please try again later." },
   });
 
@@ -353,6 +396,9 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
+      // Wire up an email provider here before going to production.
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
       // In production, send reset link via email. Log token in dev only (never in prod logs).
       if (process.env.NODE_ENV !== "production") {
         console.log(`Password reset token for ${email}: ${resetToken}`);
@@ -1109,6 +1155,7 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
+  app.post("/api/assistant", requireAuth, async (req: any, res) => {
   app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });

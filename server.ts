@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,6 +18,10 @@ const __dirname = path.dirname(__filename);
 const dbDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
 const db = new Database(path.join(dbDir, 'app.db'));
+
+try {
+  db.exec("ALTER TABLE sessions ADD COLUMN expires_at DATETIME");
+} catch (e) {}
 
 try {
   db.exec("ALTER TABLE users ADD COLUMN email TEXT UNIQUE");
@@ -128,6 +134,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id TEXT,
+    expires_at DATETIME,
     FOREIGN KEY(user_id) REFERENCES users(id)
   );
   CREATE TABLE IF NOT EXISTS kites (
@@ -261,6 +268,13 @@ async function startServer() {
       },
     },
   }));
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+  }));
+  app.use(express.json({ limit: '15mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -283,14 +297,36 @@ async function startServer() {
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
   app.use("/api/", generalLimiter);
+    message: { error: "Too many requests, please try again later." },
+  });
+
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  });
+
+  const mediaLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  });
 
   // Auth Middleware
   const requireAuth = (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "No token" });
     const token = authHeader.split(" ")[1];
-    const session = db.prepare("SELECT user_id FROM sessions WHERE token = ?").get(token) as any;
+    const session = db.prepare("SELECT user_id, expires_at FROM sessions WHERE token = ?").get(token) as any;
     if (!session) return res.status(401).json({ error: "Invalid token" });
+    if (session.expires_at && Date.parse(session.expires_at) < Date.now()) {
+      db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+      return res.status(401).json({ error: "Session expired" });
+    }
     
     const user = db.prepare("SELECT is_suspended FROM users WHERE id = ?").get(session.user_id) as any;
     if (user && user.is_suspended === 1) {
@@ -307,27 +343,29 @@ async function startServer() {
   });
 
   // Auth Routes
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", authLimiter, (req, res) => {
     const { username, email, password, facility, location, bio } = req.body;
     try {
       const id = crypto.randomUUID();
       db.prepare("INSERT INTO users (id, username, email, password, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
       const token = crypto.randomUUID();
-      db.prepare("INSERT INTO sessions (token, user_id) VALUES (?, ?)").run(token, id);
+      const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, id, sessionExpiry);
       res.json({ token, user: { id, username, email, facility, location, bio } });
     } catch (e) {
       res.status(400).json({ error: "Username or email taken, or invalid data" });
     }
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", authLimiter, (req, res) => {
     const { username, password } = req.body;
     const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
     if (user.is_suspended === 1) return res.status(403).json({ error: "Account suspended" });
     
     const token = crypto.randomUUID();
-    db.prepare("INSERT INTO sessions (token, user_id) VALUES (?, ?)").run(token, user.id);
+    const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, user.id, sessionExpiry);
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, facility: user.facility, location: user.location, bio: user.bio, role: user.role === 'user' && user.is_admin === 1 ? 'super_admin' : user.role, avatar_url: user.avatar_url } });
   });
 
@@ -361,6 +399,9 @@ async function startServer() {
       // Wire up an email provider here before going to production.
       if (process.env.NODE_ENV !== "production") {
         console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
+      // In production, send reset link via email. Log token in dev only (never in prod logs).
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`Password reset token for ${email}: ${resetToken}`);
       }
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
@@ -597,7 +638,7 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  app.get("/api/avatar/:docId", (req: any, res) => {
+  app.get("/api/avatar/:docId", requireAuth, mediaLimiter, (req: any, res) => {
     try {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
@@ -1115,6 +1156,7 @@ async function startServer() {
 
   // --- AI Assistant ---
   app.post("/api/assistant", requireAuth, async (req: any, res) => {
+  app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     const apiKey = process.env.GEMINI_API_KEY;

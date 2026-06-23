@@ -18,6 +18,10 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
 const db = new Database(path.join(dbDir, 'app.db'));
 
 try {
+  db.exec("ALTER TABLE sessions ADD COLUMN expires_at DATETIME");
+} catch (e) {}
+
+try {
   db.exec("ALTER TABLE users ADD COLUMN email TEXT UNIQUE");
 } catch (e) {}
 
@@ -128,6 +132,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id TEXT,
+    expires_at DATETIME,
     FOREIGN KEY(user_id) REFERENCES users(id)
   );
   CREATE TABLE IF NOT EXISTS kites (
@@ -242,7 +247,7 @@ async function startServer() {
   app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
   }));
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '15mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -273,8 +278,12 @@ async function startServer() {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "No token" });
     const token = authHeader.split(" ")[1];
-    const session = db.prepare("SELECT user_id FROM sessions WHERE token = ?").get(token) as any;
+    const session = db.prepare("SELECT user_id, expires_at FROM sessions WHERE token = ?").get(token) as any;
     if (!session) return res.status(401).json({ error: "Invalid token" });
+    if (session.expires_at && Date.parse(session.expires_at) < Date.now()) {
+      db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+      return res.status(401).json({ error: "Session expired" });
+    }
     
     const user = db.prepare("SELECT is_suspended FROM users WHERE id = ?").get(session.user_id) as any;
     if (user && user.is_suspended === 1) {
@@ -297,7 +306,8 @@ async function startServer() {
       const id = crypto.randomUUID();
       db.prepare("INSERT INTO users (id, username, email, password, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
       const token = crypto.randomUUID();
-      db.prepare("INSERT INTO sessions (token, user_id) VALUES (?, ?)").run(token, id);
+      const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, id, sessionExpiry);
       res.json({ token, user: { id, username, email, facility, location, bio } });
     } catch (e) {
       res.status(400).json({ error: "Username or email taken, or invalid data" });
@@ -311,7 +321,8 @@ async function startServer() {
     if (user.is_suspended === 1) return res.status(403).json({ error: "Account suspended" });
     
     const token = crypto.randomUUID();
-    db.prepare("INSERT INTO sessions (token, user_id) VALUES (?, ?)").run(token, user.id);
+    const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, user.id, sessionExpiry);
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, facility: user.facility, location: user.location, bio: user.bio, role: user.role === 'user' && user.is_admin === 1 ? 'super_admin' : user.role, avatar_url: user.avatar_url } });
   });
 

@@ -280,7 +280,7 @@ async function startServer() {
     const token = authHeader.split(" ")[1];
     const session = db.prepare("SELECT user_id, expires_at FROM sessions WHERE token = ?").get(token) as any;
     if (!session) return res.status(401).json({ error: "Invalid token" });
-    if (session.expires_at && new Date(session.expires_at) < new Date()) {
+    if (session.expires_at && Date.parse(session.expires_at) < Date.now()) {
       db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
       return res.status(401).json({ error: "Session expired" });
     }

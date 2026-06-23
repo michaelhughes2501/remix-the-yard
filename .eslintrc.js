@@ -24,5 +24,7 @@ module.exports = {
     },
   ],
   ignorePatterns: ['dist/', 'node_modules/', '*.config.ts', '*.config.js'],
-  rules: {},
+  rules: {
+    'no-empty': ['error', { allowEmptyCatch: true }],
+  },
 };

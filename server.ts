@@ -8,8 +8,6 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -243,7 +241,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '1mb' }));
+  const largeBodyParser = express.json({ limit: '50mb' });
   app.set("trust proxy", 1);
   app.use(helmet({
     contentSecurityPolicy: {
@@ -271,10 +270,6 @@ async function startServer() {
   if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
-  app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
-  }));
-  app.use(express.json({ limit: '15mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -297,8 +292,6 @@ async function startServer() {
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
   app.use("/api/", generalLimiter);
-    message: { error: "Too many requests, please try again later." },
-  });
 
   const aiLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -396,12 +389,8 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
-      // Wire up an email provider here before going to production.
       if (process.env.NODE_ENV !== "production") {
         console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
-      // In production, send reset link via email. Log token in dev only (never in prod logs).
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`Password reset token for ${email}: ${resetToken}`);
       }
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
@@ -615,7 +604,7 @@ async function startServer() {
     res.json(docs);
   });
 
-  app.post("/api/documents", requireAuth, (req: any, res) => {
+  app.post("/api/documents", requireAuth, largeBodyParser, (req: any, res) => {
     const { title, category, file_name, file_type, file_data } = req.body;
     if (!title || !file_name || !file_data) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -642,6 +631,9 @@ async function startServer() {
     try {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
+        return res.status(404).send("Avatar not found");
+      }
+      if (!doc.file_type?.startsWith("image/") || doc.file_type === "image/svg+xml") {
         return res.status(404).send("Avatar not found");
       }
       let base64Data = doc.file_data;
@@ -860,7 +852,9 @@ async function startServer() {
 
   app.get("/api/threads/:id", requireAuth, (req: any, res) => {
     const thread = db.prepare(`
-      SELECT t.*, u.username as author_name, u.facility as author_history, u.location as author_location
+      SELECT t.*, u.username as author_name,
+        CASE WHEN u.hide_history = 1 THEN 'Hidden' ELSE u.facility END as author_history,
+        CASE WHEN u.hide_location = 1 THEN 'Hidden' ELSE u.location END as author_location
       FROM threads t
       JOIN users u ON t.author_id = u.id
       WHERE t.id = ?
@@ -1155,7 +1149,6 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
-  app.post("/api/assistant", requireAuth, async (req: any, res) => {
   app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });

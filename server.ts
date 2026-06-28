@@ -241,7 +241,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '1mb' }));
+  const largeBodyParser = express.json({ limit: '50mb' });
   app.set("trust proxy", 1);
   app.use(helmet({
     contentSecurityPolicy: {
@@ -603,7 +604,7 @@ async function startServer() {
     res.json(docs);
   });
 
-  app.post("/api/documents", requireAuth, (req: any, res) => {
+  app.post("/api/documents", requireAuth, largeBodyParser, (req: any, res) => {
     const { title, category, file_name, file_type, file_data } = req.body;
     if (!title || !file_name || !file_data) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -632,7 +633,7 @@ async function startServer() {
       if (!doc || !doc.file_data) {
         return res.status(404).send("Avatar not found");
       }
-      if (!doc.file_type?.startsWith("image/")) {
+      if (!doc.file_type?.startsWith("image/") || doc.file_type === "image/svg+xml") {
         return res.status(404).send("Avatar not found");
       }
       let base64Data = doc.file_data;

@@ -8,8 +8,6 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,7 +74,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     username TEXT UNIQUE,
     email TEXT UNIQUE,
-    password TEXT,
+    password_hash TEXT,
     facility TEXT,
     location TEXT,
     bio TEXT,
@@ -297,8 +295,6 @@ async function startServer() {
   app.use("/api/auth/register", authLimiter);
   app.use("/api/auth/forgot-password", authLimiter);
   app.use("/api/", generalLimiter);
-    message: { error: "Too many requests, please try again later." },
-  });
 
   const aiLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -347,7 +343,7 @@ async function startServer() {
     const { username, email, password, facility, location, bio } = req.body;
     try {
       const id = crypto.randomUUID();
-      db.prepare("INSERT INTO users (id, username, email, password, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
+      db.prepare("INSERT INTO users (id, username, email, password_hash, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
       const token = crypto.randomUUID();
       const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, id, sessionExpiry);
@@ -359,7 +355,7 @@ async function startServer() {
 
   app.post("/api/auth/login", authLimiter, (req, res) => {
     const { username, password } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
+    const user = db.prepare("SELECT * FROM users WHERE username = ? AND password_hash = ?").get(username, password) as any;
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
     if (user.is_suspended === 1) return res.status(403).json({ error: "Account suspended" });
     
@@ -397,11 +393,9 @@ async function startServer() {
       );
       
       // Wire up an email provider here before going to production.
+      // Log reset token in dev only (never in prod logs). Wire up an email provider before production.
       if (process.env.NODE_ENV !== "production") {
         console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
-      // In production, send reset link via email. Log token in dev only (never in prod logs).
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`Password reset token for ${email}: ${resetToken}`);
       }
       res.json({ success: true, message: "If an account exists, a reset link has been sent." });
     } else {
@@ -424,7 +418,7 @@ async function startServer() {
       return res.status(400).json({ error: "Reset token has expired" });
     }
     
-    db.prepare("UPDATE users SET password = ? WHERE id = ?").run(newPassword, reset.user_id);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(newPassword, reset.user_id);
     db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
     
     // Also invalidate all existing sessions for security
@@ -1155,7 +1149,6 @@ async function startServer() {
   });
 
   // --- AI Assistant ---
-  app.post("/api/assistant", requireAuth, async (req: any, res) => {
   app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });

@@ -12,18 +12,25 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const MAX_PASSWORD_BYTES = 1024;
+
 function hashPassword(password: string): string {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) throw new Error('Password too long');
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
   return `${salt}:${hash}`;
 }
 
 function verifyPassword(password: string, stored: string): boolean {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) return false;
   const parts = stored.split(':');
   if (parts.length !== 2) return false;
   const [salt, hash] = parts;
-  const derived = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(derived, 'hex'));
+  if (hash.length !== 128) return false; // must be 64 bytes as hex
+  const storedBuf = Buffer.from(hash, 'hex');
+  const derived = crypto.scryptSync(password, salt, 64);
+  if (storedBuf.length !== derived.length) return false;
+  return crypto.timingSafeEqual(storedBuf, derived);
 }
 
 // Initialize Database

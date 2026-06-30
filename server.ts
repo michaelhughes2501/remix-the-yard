@@ -243,36 +243,31 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.set("trust proxy", 1);
+  const devCspDirectives = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'", "https://*.googleapis.com", "ws:", "wss:"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameSrc: ["'none'"],
+  };
+  const prodCspDirectives = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'", "https://*.googleapis.com"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameSrc: ["'none'"],
+  };
   app.use(helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
-        ],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:"],
-        connectSrc: [
-          "'self'",
-          "https://generativelanguage.googleapis.com",
-          "https://identitytoolkit.googleapis.com",
-          "https://securetoken.googleapis.com",
-          ...(process.env.NODE_ENV !== "production" ? ["ws:", "wss:"] : []),
-        ],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
-      },
+      directives: process.env.NODE_ENV === "production" ? prodCspDirectives : devCspDirectives,
     },
   }));
-  if (process.env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
-  }
-  app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
-  }));
-  app.use(express.json({ limit: '15mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -637,6 +632,21 @@ async function startServer() {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
         return res.status(404).send("Avatar not found");
+      }
+      if (!doc.file_type || !doc.file_type.startsWith("image/")) {
+        return res.status(403).send("Forbidden");
+      }
+      // Allow access only if the requester owns the document or it is
+      // publicly referenced as another user's avatar.
+      const avatarPath = `/api/avatar/${req.params.docId}`;
+      const authorized = db.prepare(
+        `SELECT 1 FROM documents d WHERE d.id = ?
+         AND (d.user_id = ? OR EXISTS (
+           SELECT 1 FROM users u WHERE u.avatar_url = ? OR u.avatar_url = ?
+         ))`
+      ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
+      if (!authorized) {
+        return res.status(403).send("Forbidden");
       }
       let base64Data = doc.file_data;
       if (base64Data.includes(";base64,")) {

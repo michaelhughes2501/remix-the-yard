@@ -243,24 +243,30 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.set("trust proxy", 1);
+  const devCspDirectives = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'", "https://*.googleapis.com", "ws:", "wss:"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameSrc: ["'none'"],
+  };
+  const prodCspDirectives = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'", "https://*.googleapis.com"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameSrc: ["'none'"],
+  };
   app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:"],
-        connectSrc: [
-          "'self'",
-          "https://generativelanguage.googleapis.com",
-          "https://identitytoolkit.googleapis.com",
-          "https://securetoken.googleapis.com",
-        ],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
-      },
-    } : false,
+    contentSecurityPolicy: {
+      directives: process.env.NODE_ENV === "production" ? prodCspDirectives : devCspDirectives,
+    },
   }));
 
   const authLimiter = rateLimit({
@@ -628,6 +634,18 @@ async function startServer() {
         return res.status(404).send("Avatar not found");
       }
       if (!doc.file_type || !doc.file_type.startsWith("image/")) {
+        return res.status(403).send("Forbidden");
+      }
+      // Allow access only if the requester owns the document or it is
+      // publicly referenced as another user's avatar.
+      const avatarPath = `/api/avatar/${req.params.docId}`;
+      const authorized = db.prepare(
+        `SELECT 1 FROM documents d WHERE d.id = ?
+         AND (d.user_id = ? OR EXISTS (
+           SELECT 1 FROM users u WHERE u.avatar_url = ? OR u.avatar_url = ?
+         ))`
+      ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
+      if (!authorized) {
         return res.status(403).send("Forbidden");
       }
       let base64Data = doc.file_data;

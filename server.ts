@@ -244,13 +244,10 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.set("trust proxy", 1);
   app.use(helmet({
-    contentSecurityPolicy: {
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
-        ],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: [
@@ -258,21 +255,13 @@ async function startServer() {
           "https://generativelanguage.googleapis.com",
           "https://identitytoolkit.googleapis.com",
           "https://securetoken.googleapis.com",
-          ...(process.env.NODE_ENV !== "production" ? ["ws:", "wss:"] : []),
         ],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
       },
-    },
+    } : false,
   }));
-  if (process.env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
-  }
-  app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
-  }));
-  app.use(express.json({ limit: '15mb' }));
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -637,6 +626,9 @@ async function startServer() {
       const doc = db.prepare("SELECT file_type, file_data FROM documents WHERE id = ?").get(req.params.docId) as any;
       if (!doc || !doc.file_data) {
         return res.status(404).send("Avatar not found");
+      }
+      if (!doc.file_type || !doc.file_type.startsWith("image/")) {
+        return res.status(403).send("Forbidden");
       }
       let base64Data = doc.file_data;
       if (base64Data.includes(";base64,")) {

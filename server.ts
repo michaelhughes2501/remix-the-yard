@@ -642,7 +642,7 @@ async function startServer() {
       const authorized = db.prepare(
         `SELECT 1 FROM documents d WHERE d.id = ?
          AND (d.user_id = ? OR EXISTS (
-           SELECT 1 FROM users u WHERE u.avatar_url = ? OR u.avatar_url = ?
+           SELECT 1 FROM users u WHERE u.id = d.user_id AND (u.avatar_url = ? OR u.avatar_url = ?)
          ))`
       ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
       if (!authorized) {

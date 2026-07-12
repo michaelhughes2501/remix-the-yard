@@ -1,0 +1,216 @@
+{
+  "agent": "security-scanner",
+  "summary": "35 finding(s) across 16 file(s)",
+  "findings": [
+    {
+      "severity": "high",
+      "rule": "yaml-syntax",
+      "message": "YAML failed to parse: expected '<document start>', but found '<block mapping start>' (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\codacy.yml:4)",
+      "remediation": "Fix the syntax error. A file that won't parse can't be deployed."
+    },
+    {
+      "severity": "high",
+      "rule": "yaml-syntax",
+      "message": "YAML failed to parse: expected '<document start>', but found '<block mapping start>' (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\sql.yml:4)",
+      "remediation": "Fix the syntax error. A file that won't parse can't be deployed."
+    },
+    {
+      "severity": "medium",
+      "rule": "actions-permissions-missing",
+      "message": "Workflow has no explicit top-level 'permissions' block. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\ci.yml:1)",
+      "remediation": "Add 'permissions: read-all' (or narrower) so the GITHUB_TOKEN isn't broadly writable by default."
+    },
+    {
+      "severity": "medium",
+      "rule": "actions-permissions-missing",
+      "message": "Workflow has no explicit top-level 'permissions' block. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\devskim.yml:1)",
+      "remediation": "Add 'permissions: read-all' (or narrower) so the GITHUB_TOKEN isn't broadly writable by default."
+    },
+    {
+      "severity": "medium",
+      "rule": "actions-permissions-missing",
+      "message": "Workflow has no explicit top-level 'permissions' block. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\eslint.yml:1)",
+      "remediation": "Add 'permissions: read-all' (or narrower) so the GITHUB_TOKEN isn't broadly writable by default."
+    },
+    {
+      "severity": "medium",
+      "rule": "actions-permissions-missing",
+      "message": "Workflow has no explicit top-level 'permissions' block. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\neuralegion.yml:1)",
+      "remediation": "Add 'permissions: read-all' (or narrower) so the GITHUB_TOKEN isn't broadly writable by default."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:23)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:24)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-node' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:27)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/upload-artifact' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:41)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:56)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:94)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:95)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-node' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:98)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/upload-artifact' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\build-production.yml:112)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\ci.yml:7)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-node' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\ci.yml:8)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\dependency-check.yml:31)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\dependency-check.yml:33)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/upload-artifact' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\dependency-check.yml:49)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\devskim.yml:26)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'microsoft/DevSkim-Action' is pinned to 'v1', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\devskim.yml:29)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\eslint.yml:31)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\neuralegion.yml:165)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:35)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:38)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:54)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:57)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/download-artifact' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:67)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:132)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\pr-agent.yml:133)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/checkout' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\security-scan.yml:20)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/setup-python' is pinned to 'v5', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\security-scan.yml:23)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/upload-artifact' is pinned to 'v4', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\security-scan.yml:45)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    },
+    {
+      "severity": "low",
+      "rule": "actions-unpinned",
+      "message": "Action 'actions/github-script' is pinned to 'v7', a mutable tag. (C:\\FeloniousApps\\1main\\remix_-the-yard\\.github\\workflows\\security-scan.yml:54)",
+      "remediation": "Pin third-party actions to a full commit SHA to prevent supply-chain tampering."
+    }
+  ]
+}

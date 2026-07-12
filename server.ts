@@ -12,6 +12,27 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const MAX_PASSWORD_BYTES = 1024;
+
+function hashPassword(password: string): string {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) throw new Error('Password too long');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, stored: string): boolean {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) return false;
+  const parts = stored.split(':');
+  if (parts.length !== 2) return false;
+  const [salt, hash] = parts;
+  if (hash.length !== 128) return false; // must be 64 bytes as hex
+  const storedBuf = Buffer.from(hash, 'hex');
+  const derived = crypto.scryptSync(password, salt, 64);
+  if (storedBuf.length !== derived.length) return false;
+  return crypto.timingSafeEqual(storedBuf, derived);
+}
+
 // Initialize Database
 const dbDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
@@ -74,7 +95,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     username TEXT UNIQUE,
     email TEXT UNIQUE,
-    password TEXT,
+    password_hash TEXT,
     facility TEXT,
     location TEXT,
     bio TEXT,
@@ -340,7 +361,7 @@ async function startServer() {
     const { username, email, password, facility, location, bio } = req.body;
     try {
       const id = crypto.randomUUID();
-      db.prepare("INSERT INTO users (id, username, email, password, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
+      db.prepare("INSERT INTO users (id, username, email, password_hash, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, hashPassword(password), facility, location, bio);
       const token = crypto.randomUUID();
       const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, id, sessionExpiry);
@@ -352,8 +373,8 @@ async function startServer() {
 
   app.post("/api/auth/login", authLimiter, (req, res) => {
     const { username, password } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    const user = db.prepare("SELECT * FROM users WHERE username = ?").get(username) as any;
+    if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ error: "Invalid credentials" });
     if (user.is_suspended === 1) return res.status(403).json({ error: "Account suspended" });
     
     const token = crypto.randomUUID();
@@ -389,6 +410,8 @@ async function startServer() {
         resetToken, user.id, expiresAt.toISOString()
       );
       
+      // Wire up an email provider here before going to production.
+      // Log reset token in dev only (never in prod logs). Wire up an email provider before production.
       if (process.env.NODE_ENV !== "production") {
         console.log(`[DEV] Password reset token for ${email}: ${resetToken}`);
       }
@@ -413,7 +436,7 @@ async function startServer() {
       return res.status(400).json({ error: "Reset token has expired" });
     }
     
-    db.prepare("UPDATE users SET password = ? WHERE id = ?").run(newPassword, reset.user_id);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hashPassword(newPassword), reset.user_id);
     db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
     
     // Also invalidate all existing sessions for security

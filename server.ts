@@ -1172,6 +1172,28 @@ async function startServer() {
     }
   });
 
+  // AI chat endpoint (alias for /api/assistant — integrations guide)
+  app.post("/api/chat", aiLimiter, async (req: any, res) => {
+    const { message, context } = req.body;
+    if (!message) return res.status(400).json({ error: "No message provided" });
+    try {
+      const reply = await (async () => {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) return "I'm here to help with reentry resources, housing, jobs, legal aid, and community support.";
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: `You are a supportive assistant for The Yard. Context: ${context || 'general'}. Help with reentry. Be brief.\n\nUser: ${message}` }] }] })
+        });
+        const data = await response.json() as any;
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help — ask me about housing, jobs, legal resources, or community support.";
+      })();
+      res.json({ reply });
+    } catch {
+      res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

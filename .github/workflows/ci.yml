@@ -1,13 +1,45 @@
 name: CI
-on: [push, pull_request]
+
+# Replaces the previous version of this file, which ran `npm ci`. This repo has
+# no committed package-lock.json (it is an npm *workspace member* locally, where
+# the 1main root lock is authoritative — but it is a standalone repo on GitHub),
+# so `npm ci` fails here every run. Uses `npm install` instead.
+#
+# The `verify` job is the one to mark as a required status check.
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  verify:
+    name: verify
     runs-on: ubuntu-latest
+    env:
+      # NODE_ENV=production makes npm set omit=dev, silently skipping
+      # devDependencies (typescript, vite) while still exiting 0.
+      NODE_ENV: development
+      CI: true
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --include=dev
+
+      - name: Type-check
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

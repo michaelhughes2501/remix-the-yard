@@ -2,11 +2,12 @@ module.exports = {
   env: {
     browser: true,
     es2022: true,
-    es2021: true,
     node: true,
   },
   extends: ['eslint:recommended'],
   parserOptions: {
+<<<<<<< HEAD
+=======
     ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: { jsx: true },
@@ -17,6 +18,7 @@ module.exports = {
   // TypeScript files are type-checked by tsc (npm run lint). Skipping them here
   // because the CI eslint workflow does not install @typescript-eslint/parser.
   ignorePatterns: ['dist/', 'node_modules/', '*.ts', '*.tsx', '*.config.ts', '*.config.js'],
+>>>>>>> origin/master
     ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: { jsx: true },

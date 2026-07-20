@@ -6,7 +6,13 @@
 name: DevSkim
 
 permissions:
+<<<<<<< HEAD
+  actions: read
   contents: read
+  security-events: write
+=======
+  contents: read
+>>>>>>> origin/master
 
 on:
   push:
@@ -20,10 +26,6 @@ jobs:
   lint:
     name: DevSkim
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4

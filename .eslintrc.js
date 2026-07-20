@@ -6,10 +6,24 @@ module.exports = {
   },
   extends: ['eslint:recommended'],
   parserOptions: {
+<<<<<<< HEAD
+=======
     ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: { jsx: true },
   },
+  ignorePatterns: ['dist/', 'node_modules/', '*.config.ts', '*.config.js'],
+  rules: {
+    'no-empty': ['error', { allowEmptyCatch: true }],
+  // TypeScript files are type-checked by tsc (npm run lint). Skipping them here
+  // because the CI eslint workflow does not install @typescript-eslint/parser.
+  ignorePatterns: ['dist/', 'node_modules/', '*.ts', '*.tsx', '*.config.ts', '*.config.js'],
+>>>>>>> origin/master
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    ecmaFeatures: { jsx: true },
+  },
+  ignorePatterns: ['dist/', 'node_modules/', '*.ts', '*.tsx', '*.config.ts', '*.config.js'],
   overrides: [
     {
       files: ['*.ts', '*.tsx'],
@@ -24,7 +38,6 @@ module.exports = {
       },
     },
   ],
-  ignorePatterns: ['dist/', 'node_modules/', '*.config.ts', '*.config.js'],
   rules: {
     'no-empty': ['error', { allowEmptyCatch: true }],
   },

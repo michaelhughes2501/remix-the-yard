@@ -1,0 +1,24 @@
+name: Codacy Analysis
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  codacy-security-scan:
+    name: Codacy Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Codacy CLI V2
+        uses: codacy/codacy-cli-v2-action@be2c794209715d99f18b58fce771b3ecbe1cff96 # 0.2.0
+        with:
+          project_token: ${{ secrets.CODACY_PROJECT_TOKEN }}

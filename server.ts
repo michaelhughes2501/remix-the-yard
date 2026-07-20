@@ -12,6 +12,27 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const MAX_PASSWORD_BYTES = 1024;
+
+function hashPassword(password: string): string {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) throw new Error('Password too long');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, stored: string): boolean {
+  if (Buffer.byteLength(password) > MAX_PASSWORD_BYTES) return false;
+  const parts = stored.split(':');
+  if (parts.length !== 2) return false;
+  const [salt, hash] = parts;
+  if (hash.length !== 128) return false; // must be 64 bytes as hex
+  const storedBuf = Buffer.from(hash, 'hex');
+  const derived = crypto.scryptSync(password, salt, 64);
+  if (storedBuf.length !== derived.length) return false;
+  return crypto.timingSafeEqual(storedBuf, derived);
+}
+
 // Initialize Database
 const dbDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir);
@@ -241,7 +262,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '1mb' }));
+  const largeBodyParser = express.json({ limit: '50mb' });
   app.set("trust proxy", 1);
   const devCspDirectives = {
     defaultSrc: ["'self'"],
@@ -268,6 +290,12 @@ async function startServer() {
       directives: process.env.NODE_ENV === "production" ? prodCspDirectives : devCspDirectives,
     },
   }));
+<<<<<<< HEAD
+=======
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+>>>>>>> origin/master
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -338,7 +366,7 @@ async function startServer() {
     const { username, email, password, facility, location, bio } = req.body;
     try {
       const id = crypto.randomUUID();
-      db.prepare("INSERT INTO users (id, username, email, password_hash, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, password, facility, location, bio);
+      db.prepare("INSERT INTO users (id, username, email, password_hash, facility, location, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, username, email, hashPassword(password), facility, location, bio);
       const token = crypto.randomUUID();
       const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, id, sessionExpiry);
@@ -350,8 +378,8 @@ async function startServer() {
 
   app.post("/api/auth/login", authLimiter, (req, res) => {
     const { username, password } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE username = ? AND password_hash = ?").get(username, password) as any;
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    const user = db.prepare("SELECT * FROM users WHERE username = ?").get(username) as any;
+    if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ error: "Invalid credentials" });
     if (user.is_suspended === 1) return res.status(403).json({ error: "Account suspended" });
     
     const token = crypto.randomUUID();
@@ -413,7 +441,7 @@ async function startServer() {
       return res.status(400).json({ error: "Reset token has expired" });
     }
     
-    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(newPassword, reset.user_id);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hashPassword(newPassword), reset.user_id);
     db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
     
     // Also invalidate all existing sessions for security
@@ -604,7 +632,7 @@ async function startServer() {
     res.json(docs);
   });
 
-  app.post("/api/documents", requireAuth, (req: any, res) => {
+  app.post("/api/documents", requireAuth, largeBodyParser, (req: any, res) => {
     const { title, category, file_name, file_type, file_data } = req.body;
     if (!title || !file_name || !file_data) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -633,6 +661,7 @@ async function startServer() {
       if (!doc || !doc.file_data) {
         return res.status(404).send("Avatar not found");
       }
+<<<<<<< HEAD
       if (!doc.file_type || !doc.file_type.startsWith("image/")) {
         return res.status(403).send("Forbidden");
       }
@@ -647,6 +676,10 @@ async function startServer() {
       ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
       if (!authorized) {
         return res.status(403).send("Forbidden");
+=======
+      if (!doc.file_type?.startsWith("image/") || doc.file_type === "image/svg+xml") {
+        return res.status(404).send("Avatar not found");
+>>>>>>> origin/master
       }
       let base64Data = doc.file_data;
       if (base64Data.includes(";base64,")) {
@@ -864,7 +897,9 @@ async function startServer() {
 
   app.get("/api/threads/:id", requireAuth, (req: any, res) => {
     const thread = db.prepare(`
-      SELECT t.*, u.username as author_name, u.facility as author_history, u.location as author_location
+      SELECT t.*, u.username as author_name,
+        CASE WHEN u.hide_history = 1 THEN 'Hidden' ELSE u.facility END as author_history,
+        CASE WHEN u.hide_location = 1 THEN 'Hidden' ELSE u.location END as author_location
       FROM threads t
       JOIN users u ON t.author_id = u.id
       WHERE t.id = ?

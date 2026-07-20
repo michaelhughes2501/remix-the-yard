@@ -27,11 +27,11 @@ jobs:
     steps:
       # 1. Check out the repository
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # 2. Set up Node.js
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm          # cache node_modules between runs
@@ -65,7 +65,7 @@ jobs:
 
       # 8. Upload ZIP as a downloadable GitHub Actions artifact (kept 7 days)
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-build-${{ github.sha }}
           path: project-build.zip

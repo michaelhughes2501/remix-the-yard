@@ -6,13 +6,8 @@
 name: DevSkim
 
 permissions:
-<<<<<<< HEAD
-  actions: read
   contents: read
   security-events: write
-=======
-  contents: read
->>>>>>> origin/master
 
 on:
   push:

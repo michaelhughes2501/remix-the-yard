@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Phone, AlertTriangle, X, Heart, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SOSButton() {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   return (
     <>
@@ -11,26 +20,35 @@ export default function SOSButton() {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 bg-red-600 text-white p-4 rounded-full shadow-2xl hover:bg-red-700 hover:scale-105 transition-all flex items-center justify-center animate-pulse"
         title="Emergency Help & Crisis Support"
+        aria-label="Open emergency help and crisis support"
       >
         <ShieldAlert size={28} />
       </button>
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white w-full max-w-md border-2 border-red-600 shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Crisis support"
+              onClick={e => e.stopPropagation()}
             >
               <div className="bg-red-600 text-white p-6 flex justify-between items-center">
                 <h2 className="text-2xl font-serif italic tracking-tighter flex items-center gap-2">
                   <AlertTriangle size={24} /> Crisis Support
                 </h2>
-                <button 
+                <button
                   onClick={() => setIsOpen(false)}
                   className="hover:bg-white/20 p-2 rounded-full transition-colors"
+                  aria-label="Close crisis support"
                 >
                   <X size={20} />
                 </button>

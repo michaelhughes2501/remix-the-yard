@@ -246,7 +246,7 @@ export default function Opportunities() {
             <div className="bg-white border border-[#141414] p-6 space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-bold uppercase tracking-widest text-sm">{editingAppId ? 'Edit Application' : 'New Application'}</h4>
-                <button onClick={() => setIsAddingApp(false)} className="opacity-60 hover:opacity-100"><X size={20} /></button>
+                <button onClick={() => setIsAddingApp(false)} className="opacity-60 hover:opacity-100" aria-label="Close application form"><X size={20} /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

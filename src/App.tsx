@@ -149,10 +149,11 @@ function MainApp() {
 
         {/* Desktop Nav */}
           <div className="hidden md:flex gap-6 items-center flex-wrap justify-center">
-            <button 
+            <button
               onClick={() => setIsSearchOpen(true)}
               className="p-2 hover:bg-[#141414]/5 rounded-full transition-colors opacity-60 hover:opacity-100"
               title="Search"
+              aria-label="Open search"
             >
               <Search size={20} />
             </button>
@@ -171,9 +172,11 @@ function MainApp() {
             ))}
             
             <div className="relative ml-2">
-            <button 
+            <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 hover:bg-[#141414]/5 rounded-full transition-colors"
+              aria-label="Toggle notifications"
+              aria-expanded={showNotifications}
             >
               <Bell size={20} />
               {notifications.filter(n => !n.is_read).length > 0 && (
@@ -264,7 +267,12 @@ function MainApp() {
             </button>
           </div>
 
-        <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+        <button
+          className="md:hidden"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={isMenuOpen}
+        >
           {isMenuOpen ? <X /> : <Menu />}
         </button>
       </nav>

@@ -231,7 +231,7 @@ The Yard Team`;
         <div className="bg-white border border-[#141414] p-8 space-y-6">
           <div className="flex justify-between items-center mb-4 border-b border-[#141414]/10 pb-4">
             <h4 className="font-serif italic text-2xl">{editingCaseId ? 'Edit Case Details' : 'Log New Case'}</h4>
-            <button onClick={() => setIsAddingCase(false)} className="opacity-60 hover:opacity-100"><X size={24} /></button>
+            <button onClick={() => setIsAddingCase(false)} className="opacity-60 hover:opacity-100" aria-label="Close case form"><X size={24} /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>

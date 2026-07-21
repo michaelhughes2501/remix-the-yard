@@ -232,7 +232,7 @@ export default function Resources() {
               >
                 <div className="flex justify-between items-center mb-6">
                   <h4 className="font-bold uppercase tracking-widest text-xs">Add New Contact</h4>
-                  <button type="button" onClick={() => setShowAddPO(false)} className="opacity-40 hover:opacity-100"><X size={20} /></button>
+                  <button type="button" onClick={() => setShowAddPO(false)} className="opacity-40 hover:opacity-100" aria-label="Close add officer form"><X size={20} /></button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>

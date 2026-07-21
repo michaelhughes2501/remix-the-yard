@@ -11,11 +11,6 @@ name: ESLint
 
 permissions:
   contents: read
-<<<<<<< HEAD
-  security-events: write
-  actions: read
-=======
->>>>>>> origin/master
 
 on:
   push:

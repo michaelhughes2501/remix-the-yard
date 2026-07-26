@@ -1,15 +1,10 @@
 name: CI
 
 on: [push, pull_request]
-<<<<<<< HEAD
-permissions:
-  contents: read
-=======
 
 permissions:
   contents: read
 
->>>>>>> origin/master
 jobs:
   build:
     runs-on: ubuntu-latest

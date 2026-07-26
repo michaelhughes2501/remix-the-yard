@@ -290,12 +290,9 @@ async function startServer() {
       directives: process.env.NODE_ENV === "production" ? prodCspDirectives : devCspDirectives,
     },
   }));
-<<<<<<< HEAD
-=======
   if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
->>>>>>> origin/master
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -661,8 +658,7 @@ async function startServer() {
       if (!doc || !doc.file_data) {
         return res.status(404).send("Avatar not found");
       }
-<<<<<<< HEAD
-      if (!doc.file_type || !doc.file_type.startsWith("image/")) {
+      if (!doc.file_type || !doc.file_type.startsWith("image/") || doc.file_type === "image/svg+xml") {
         return res.status(403).send("Forbidden");
       }
       // Allow access only if the requester owns the document or it is
@@ -676,10 +672,6 @@ async function startServer() {
       ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
       if (!authorized) {
         return res.status(403).send("Forbidden");
-=======
-      if (!doc.file_type?.startsWith("image/") || doc.file_type === "image/svg+xml") {
-        return res.status(404).send("Avatar not found");
->>>>>>> origin/master
       }
       let base64Data = doc.file_data;
       if (base64Data.includes(";base64,")) {

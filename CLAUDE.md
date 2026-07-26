@@ -76,7 +76,7 @@ APP_URL=          # Base URL (used for OAuth callbacks, optional)
 ```
 
 ## Known Limitations
-- Passwords stored in plaintext — acceptable for prototype, must hash (bcrypt) before production
+- Passwords are hashed with Node's built-in `crypto.scryptSync` (per-user random salt, `salt:hash` hex format, `crypto.timingSafeEqual` on verify) — see `hashPassword`/`verifyPassword` in `server.ts`. Not plaintext; this doc previously said otherwise.
 - No formal migration system — schema changes via ALTER TABLE in server.ts startup
 - No test suite
 - Firebase integration is optional/unused if only SQLite is configured

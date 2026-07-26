@@ -260,7 +260,7 @@ db.exec(`
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json({ limit: '1mb' }));
   const largeBodyParser = express.json({ limit: '50mb' });
@@ -660,6 +660,7 @@ async function startServer() {
         return res.status(404).send("Avatar not found");
       }
       if (!doc.file_type || !doc.file_type.startsWith("image/") || doc.file_type === "image/svg+xml") {
+        return res.status(404).send("Avatar not found");
         return res.status(403).send("Forbidden");
       }
       // Allow access only if the requester owns the document or it is

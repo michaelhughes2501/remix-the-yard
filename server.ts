@@ -673,6 +673,7 @@ async function startServer() {
          ))`
       ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
       if (!authorized) {
+        return res.status(404).send("Avatar not found");
         return res.status(403).send("Forbidden");
       }
       let base64Data = doc.file_data;

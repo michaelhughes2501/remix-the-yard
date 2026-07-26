@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, Clock, ArrowLeft, User, Search, Check, CheckCheck, ExternalLink } from 'lucide-react';
+import { Send, MessageSquare, Clock, ArrowLeft, User, Search, Check, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../AuthContext';
 import { Conversation, ThreadMessage } from '../types';
@@ -190,13 +190,6 @@ export default function Kites({ onNavigate }: { onNavigate?: (tab: any) => void 
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-serif italic">{activeConversation?.other_user_name || 'Loading...'}</h3>
-                      <button 
-                        onClick={() => onNavigate?.('profile')}
-                        className="p-1 hover:bg-[#141414]/5 rounded-sm opacity-40 hover:opacity-100 transition-all"
-                        title="View Profile"
-                      >
-                        <ExternalLink size={14} />
-                      </button>
                     </div>
                     <span className="text-[10px] uppercase tracking-widest opacity-40 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> Member since {new Date().getFullYear()}

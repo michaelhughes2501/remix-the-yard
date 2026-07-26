@@ -15,6 +15,14 @@ export default function GlobalSearch({ onClose, onNavigate }: { onClose: () => v
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     if (!query.trim()) {
       setResults({ users: [], jobs: [], housing: [], posts: [] });
       return;
@@ -43,12 +51,19 @@ export default function GlobalSearch({ onClose, onNavigate }: { onClose: () => v
   const hasResults = results.users.length > 0 || results.jobs.length > 0 || results.housing.length > 0 || results.posts.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-black/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: -20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -20 }}
         className="bg-[#E4E3E0] w-full max-w-3xl border border-[#141414] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Global search"
+        onClick={e => e.stopPropagation()}
       >
         <div className="bg-[#141414] text-[#E4E3E0] p-4 flex items-center gap-4">
           <Search size={24} className="opacity-60" />
@@ -58,9 +73,10 @@ export default function GlobalSearch({ onClose, onNavigate }: { onClose: () => v
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search The Yard..."
+            aria-label="Search The Yard"
             className="flex-1 bg-transparent border-none outline-none text-xl font-serif italic placeholder:opacity-40"
           />
-          <button onClick={onClose} className="hover:opacity-70 transition-opacity p-2">
+          <button onClick={onClose} className="hover:opacity-70 transition-opacity p-2" aria-label="Close search">
             <X size={24} />
           </button>
         </div>

@@ -319,7 +319,7 @@ export default function WorkspaceHub() {
 
       {!isConnected ? (
         /* Not Connected State */
-        <div className="bg-white border border-[#141414] p-12 text-center" id="workspace-unlinked bg">
+        <div className="bg-white border border-[#141414] p-12 text-center" id="workspace-unlinked-bg">
           <div className="max-w-md mx-auto space-y-6">
             <div className="bg-[#E4E3E0] text-[#141414] p-5 rounded-full w-20 h-20 flex items-center justify-center mx-auto border border-[#141414]">
               <Briefcase size={36} />
@@ -360,7 +360,7 @@ export default function WorkspaceHub() {
             </button>
             <button
               onClick={() => setActiveSubTab('chat')}
-              className={`p-4 flex items-center justify-center gap-2 border-r border-b sm:border-b-0 border-[#141414] transiton-colors ${
+              className={`p-4 flex items-center justify-center gap-2 border-r border-b sm:border-b-0 border-[#141414] transition-colors ${
                 activeSubTab === 'chat' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-gray-100'
               }`}
             >

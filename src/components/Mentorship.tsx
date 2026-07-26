@@ -18,6 +18,15 @@ export default function MentorshipTab() {
     fetchData();
   }, [token]);
 
+  useEffect(() => {
+    if (!requestModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setRequestModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [requestModalOpen]);
+
   const fetchData = () => {
     fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json())
@@ -248,18 +257,26 @@ export default function MentorshipTab() {
       {/* Mentorship Request Modal */}
       <AnimatePresence>
         {requestModalOpen && selectedMentor && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setRequestModalOpen(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white w-full max-w-md border border-[#141414] shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Request mentorship"
+              onClick={e => e.stopPropagation()}
             >
               <div className="bg-[#141414] text-[#E4E3E0] p-4 flex justify-between items-center">
                 <h3 className="font-serif italic text-xl">Request Mentorship</h3>
-                <button 
+                <button
                   onClick={() => setRequestModalOpen(false)}
                   className="hover:opacity-70 transition-opacity"
+                  aria-label="Close mentorship request"
                 >
                   <X size={20} />
                 </button>

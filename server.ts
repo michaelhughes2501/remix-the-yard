@@ -1180,11 +1180,16 @@ async function startServer() {
       const reply = await (async () => {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return "I'm here to help with reentry resources, housing, jobs, legal aid, and community support.";
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: `You are a supportive assistant for The Yard. Context: ${context || 'general'}. Help with reentry. Be brief.\n\nUser: ${message}` }] }] })
+          body: JSON.stringify({ contents: [{ parts: [{ text: `You are a supportive assistant for The Yard. Context: ${context || 'general'}. Help with reentry. Be brief.\n\nUser: ${message}` }] }] }),
+          signal: controller.signal
         });
+        clearTimeout(timeout);
+        if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
         const data = await response.json() as any;
         return data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help — ask me about housing, jobs, legal resources, or community support.";
       })();

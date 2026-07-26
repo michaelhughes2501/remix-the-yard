@@ -291,6 +291,10 @@ async function startServer() {
     },
   }));
 
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -657,6 +661,7 @@ async function startServer() {
       }
       if (!doc.file_type || !doc.file_type.startsWith("image/") || doc.file_type === "image/svg+xml") {
         return res.status(404).send("Avatar not found");
+        return res.status(403).send("Forbidden");
       }
       // Allow access only if the requester owns the document or it is
       // publicly referenced as another user's avatar.

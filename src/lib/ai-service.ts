@@ -77,11 +77,14 @@ class _AIService {
       })),
     ];
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch(geminiUrl(apiKey), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contents }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         console.error(`[ai] Gemini ${res.status}`);
@@ -95,6 +98,8 @@ class _AIService {
     } catch (err) {
       console.error("[ai] Gemini request failed", err);
       return this._fallback(last);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

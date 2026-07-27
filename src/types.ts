@@ -1,3 +1,21 @@
+// ── V3 API Response + Role types ─────────────────────────────────────────────
+export type UserRole = 'user' | 'moderator' | 'admin' | 'super_admin';
+export const ROLE_RANK: Record<UserRole, number> = { user:0, moderator:1, admin:2, super_admin:3 };
+export const hasRole = (r: UserRole, req: UserRole) => ROLE_RANK[r] >= ROLE_RANK[req];
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  timestamp: string;
+}
+export const apiOk = <T>(data: T, msg?: string): ApiResponse<T> =>
+  ({ success: true, data, message: msg, timestamp: new Date().toISOString() });
+export const apiErr = (error: string): ApiResponse<never> =>
+  ({ success: false, error, timestamp: new Date().toISOString() });
+
+// ── Entities ─────────────────────────────────────────────────────────────────
 export interface User {
   id: string;
   name: string;

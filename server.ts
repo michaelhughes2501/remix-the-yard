@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
+import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -8,6 +10,15 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
+import { AIService } from "./src/lib/ai-service.js";
+import { logger } from "../_shared/lib/logger.js";
+import { validateEnv } from "../_shared/lib/validate-env.js";
+
+// ── V3 environment validation ─────────────────────────────────────────────────
+validateEnv({
+  optional:   { PORT: "3000", NODE_ENV: "development" },
+  production: ["DATABASE_URL", "CORS_ORIGIN"],
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -239,8 +250,9 @@ db.exec(`
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
+  app.use(logger.requestMiddleware());
   app.use(express.json({ limit: '50mb' }));
   app.set("trust proxy", 1);
   app.use(helmet({
@@ -271,6 +283,11 @@ async function startServer() {
   }
   app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+  }));
+  app.use(compression());
+  app.use(cors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
   }));
   app.use(express.json({ limit: '15mb' }));
 
@@ -335,7 +352,15 @@ async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+  });
+  app.get("/api/metrics", (_req, res) => {
+    const mem = process.memoryUsage();
+    res.json({
+      uptime: Math.floor(process.uptime()),
+      memory: { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal },
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // Auth Routes
@@ -1148,46 +1173,27 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  // --- AI Assistant ---
+  // --- AI Assistant (V3 — uses AIService abstraction) ---
   app.post("/api/assistant", requireAuth, aiLimiter, async (req: any, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.json({ reply: "I'm here to help with reentry resources, housing, jobs, legal aid, and community support. What do you need?" });
-    }
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `You are a supportive assistant for The Yard — a community platform for formerly incarcerated people. Help with reentry: housing, jobs, legal aid, mental health, peer connection. Be warm and practical. Keep responses under 3 sentences.\n\nUser: ${message}` }] }]
-        })
-      });
-      const data = await response.json() as any;
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help — ask me about housing, jobs, legal resources, or community support.";
+      const reply = await AIService.chat([{ role: "user", content: message }]);
       res.json({ reply });
     } catch {
       res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });
     }
   });
 
-  // AI chat endpoint (alias for /api/assistant — integrations guide)
+  // AI chat endpoint (alias for /api/assistant — accepts optional context)
   app.post("/api/chat", aiLimiter, async (req: any, res) => {
     const { message, context } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     try {
-      const reply = await (async () => {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) return "I'm here to help with reentry resources, housing, jobs, legal aid, and community support.";
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: `You are a supportive assistant for The Yard. Context: ${context || 'general'}. Help with reentry. Be brief.\n\nUser: ${message}` }] }] })
-        });
-        const data = await response.json() as any;
-        return data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help — ask me about housing, jobs, legal resources, or community support.";
-      })();
+      const reply = await AIService.chat(
+        [{ role: "user", content: message }],
+        { context: context ?? "general" },
+      );
       res.json({ reply });
     } catch {
       res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });

@@ -11,6 +11,12 @@ coverage/
 data/
 *.db
 
+# Firebase applet config (kept out of the repo — see "stop tracking firebase config")
+firebase-applet-config.json
+
+# Stray temp files
+tmpc
+
 
 
 #Ignore vscode AI rules

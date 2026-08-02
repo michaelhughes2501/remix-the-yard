@@ -337,7 +337,8 @@ async function startServer() {
   const requireAuth = (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "No token" });
-    const token = authHeader.split(" ")[1];
+    const [scheme, token] = authHeader.split(" ");
+    if (scheme !== "Bearer" || !token) return res.status(401).json({ error: "Invalid token format" });
     const session = db.prepare("SELECT user_id, expires_at FROM sessions WHERE token = ?").get(token) as any;
     if (!session) return res.status(401).json({ error: "Invalid token" });
     if (session.expires_at && Date.parse(session.expires_at) < Date.now()) {
@@ -661,7 +662,6 @@ async function startServer() {
       }
       if (!doc.file_type || !doc.file_type.startsWith("image/") || doc.file_type === "image/svg+xml") {
         return res.status(404).send("Avatar not found");
-        return res.status(403).send("Forbidden");
       }
       // Allow access only if the requester owns the document or it is
       // publicly referenced as another user's avatar.
@@ -674,7 +674,6 @@ async function startServer() {
       ).get(req.params.docId, req.userId, req.params.docId, avatarPath);
       if (!authorized) {
         return res.status(404).send("Avatar not found");
-        return res.status(403).send("Forbidden");
       }
       let base64Data = doc.file_data;
       if (base64Data.includes(";base64,")) {
@@ -1043,8 +1042,11 @@ async function startServer() {
 
   app.post("/api/admin/flagged/:type/:id/dismiss", requireAuth, requireRole(['moderator', 'admin', 'super_admin']), (req: any, res) => {
     if (!['thread', 'reply'].includes(req.params.type)) return res.status(400).json({ error: "Invalid type" });
-    const table = req.params.type === 'thread' ? 'threads' : 'replies';
-    db.prepare(`UPDATE ${table} SET is_flagged = 0 WHERE id = ?`).run(req.params.id);
+    if (req.params.type === 'thread') {
+      db.prepare("UPDATE threads SET is_flagged = 0 WHERE id = ?").run(req.params.id);
+    } else {
+      db.prepare("UPDATE replies SET is_flagged = 0 WHERE id = ?").run(req.params.id);
+    }
     
     // Log the action
     db.prepare("INSERT INTO moderation_logs (id, moderator_id, action, target_type, target_id) VALUES (?, ?, ?, ?, ?)").run(
@@ -1056,11 +1058,12 @@ async function startServer() {
 
   app.delete("/api/admin/flagged/:type/:id", requireAuth, requireRole(['moderator', 'admin', 'super_admin']), (req: any, res) => {
     if (!['thread', 'reply'].includes(req.params.type)) return res.status(400).json({ error: "Invalid type" });
-    const table = req.params.type === 'thread' ? 'threads' : 'replies';
-    if (table === 'threads') {
+    if (req.params.type === 'thread') {
       db.prepare(`DELETE FROM replies WHERE thread_id = ?`).run(req.params.id);
+      db.prepare("DELETE FROM threads WHERE id = ?").run(req.params.id);
+    } else {
+      db.prepare("DELETE FROM replies WHERE id = ?").run(req.params.id);
     }
-    db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(req.params.id);
     
     // Log the action
     db.prepare("INSERT INTO moderation_logs (id, moderator_id, action, target_type, target_id) VALUES (?, ?, ?, ?, ?)").run(

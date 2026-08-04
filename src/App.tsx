@@ -373,9 +373,9 @@ function MainApp() {
           <div>
             <h4 className="text-xs uppercase tracking-widest opacity-40 mb-4">Quick Links</h4>
             <ul className="flex flex-col gap-2 text-sm">
-              <li><a href="#" className="hover:underline">Mental Health Support</a></li>
-              <li><a href="#" className="hover:underline">Parole Resources</a></li>
-              <li><a href="#" className="hover:underline">Legal Aid</a></li>
+              <li><button onClick={() => setActiveTab('resources')} className="hover:underline text-left">Mental Health Support</button></li>
+              <li><button onClick={() => setActiveTab('resources')} className="hover:underline text-left">Parole Resources</button></li>
+              <li><button onClick={() => setActiveTab('tools')} className="hover:underline text-left">Legal Aid</button></li>
             </ul>
           </div>
           <div>

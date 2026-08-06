@@ -13,7 +13,7 @@ export const ROLE_RANK: Record<UserRole, number> = {
 function resolveRole(user: any): UserRole {
   if (!user) return 'user';
   if (user.role && ROLE_RANK[user.role as UserRole] !== undefined) return user.role as UserRole;
-  if (user.is_admin === 1) return 'admin';
+  if (user.is_admin === 1) return 'super_admin';
   return 'user';
 }
 

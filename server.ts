@@ -1186,7 +1186,7 @@ async function startServer() {
   });
 
   // AI chat endpoint (alias for /api/assistant — accepts optional context)
-  app.post("/api/chat", aiLimiter, async (req: any, res) => {
+  app.post("/api/chat", requireAuth, aiLimiter, async (req: any, res) => {
     const { message, context } = req.body;
     if (!message) return res.status(400).json({ error: "No message provided" });
     try {

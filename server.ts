@@ -248,6 +248,9 @@ db.exec(`
   );
 `);
 
+/**
+ * Configures and starts the Express server, including middleware, API routes, and environment-specific frontend serving.
+ */
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;

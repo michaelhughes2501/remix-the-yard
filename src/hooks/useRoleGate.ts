@@ -10,6 +10,12 @@ export const ROLE_RANK: Record<UserRole, number> = {
   user: 0, moderator: 1, admin: 2, super_admin: 3,
 };
 
+/**
+ * Resolves the effective role for a user.
+ *
+ * @param user - The user whose role should be resolved
+ * @returns The user's valid role, `super_admin` for legacy administrator accounts, or `user` when no recognized role applies
+ */
 function resolveRole(user: any): UserRole {
   if (!user) return 'user';
   if (user.role && ROLE_RANK[user.role as UserRole] !== undefined) return user.role as UserRole;
@@ -17,6 +23,11 @@ function resolveRole(user: any): UserRole {
   return 'user';
 }
 
+/**
+ * Provides the authenticated user's resolved role and role-based access checks.
+ *
+ * @returns The resolved role, authentication and privilege status flags, and a function that checks whether the user meets a required role level.
+ */
 export function useRoleGate() {
   const { user } = useAuth();
   const role = resolveRole(user);

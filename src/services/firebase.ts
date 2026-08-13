@@ -4,7 +4,10 @@ import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+const app = initializeApp({
+  ...firebaseConfig,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+});
 
 // Export Authentication and Firestore references
 export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId); /* CRITICAL: The app will break without this line */

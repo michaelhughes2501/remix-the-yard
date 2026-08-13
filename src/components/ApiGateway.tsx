@@ -456,7 +456,7 @@ export default function ApiGateway() {
           <div className="bg-[#141414] text-[#E4E3E0] p-6 overflow-x-auto">
             <h4 className="text-xs uppercase tracking-widest font-bold opacity-60 mb-3">Example — list jobs</h4>
             <pre className="text-sm font-mono whitespace-pre-wrap break-all">{`curl http://localhost:3000/gateway/v1/jobs \\
-  -H "X-API-Key: yk_live_your_key_here"`}</pre>
+  -H "X-API-Key: \${YARD_API_KEY}"`}</pre>
           </div>
 
           <div className="bg-white border border-[#141414] overflow-x-auto">

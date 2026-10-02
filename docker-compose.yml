@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: remix-the-yard
+    ports:
+      - "5175:5175"
+    environment:
+      NODE_ENV: development
+      PORT: 5175
+    volumes:
+      - ./src:/app/src
+      - ./server:/app/server
+    command: npm run dev
+    restart: unless-stopped

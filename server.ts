@@ -271,20 +271,20 @@ async function startServer() {
   const devCspDirectives = {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
-    styleSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     imgSrc: ["'self'", "data:", "blob:"],
     connectSrc: ["'self'", "https://*.googleapis.com", "ws:", "wss:"],
-    fontSrc: ["'self'"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
     objectSrc: ["'none'"],
     frameSrc: ["'none'"],
   };
   const prodCspDirectives = {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
-    styleSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     imgSrc: ["'self'", "data:", "blob:"],
     connectSrc: ["'self'", "https://*.googleapis.com"],
-    fontSrc: ["'self'"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
     objectSrc: ["'none'"],
     frameSrc: ["'none'"],
   };
@@ -1255,7 +1255,7 @@ async function startServer() {
   } else {
     // Production static serving
     app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (req, res) => {
+    app.get("/{*splat}", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }

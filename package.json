@@ -14,6 +14,7 @@
   "dependencies": {
     "@google/genai": "^2.10.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "@vitejs/plugin-react": "^6.0.3",
     "better-sqlite3": "^12.11.1",

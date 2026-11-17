@@ -1,5 +1,5 @@
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from './firebase.ts';
+import { getFirebaseAuth } from './firebase.ts';
 
 // Cache the access token in memory as requested by security constraints (no localStorage storing)
 let cachedAccessToken: string | null = null;
@@ -31,7 +31,7 @@ export function getGoogleProvider() {
 export async function connectGoogleWorkspace() {
   try {
     const provider = getGoogleProvider();
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(getFirebaseAuth(), provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('Could not retrieve Google OAuth access token.');

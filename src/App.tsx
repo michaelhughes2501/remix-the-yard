@@ -23,6 +23,7 @@ import { twMerge } from 'tailwind-merge';
 import { AuthProvider, useAuth } from './AuthContext';
 import Auth from './components/Auth';
 import { AppNotification } from './types';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -396,6 +397,7 @@ export default function App() {
   return (
     <AuthProvider>
       <MainApp />
+      <SpeedInsights />
     </AuthProvider>
   );
 }

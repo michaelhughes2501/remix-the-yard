@@ -270,7 +270,7 @@ async function startServer() {
   app.set("trust proxy", 1);
   const devCspDirectives = {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'", "https://va.vercel-scripts.com"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     imgSrc: ["'self'", "data:", "blob:"],
     connectSrc: ["'self'", "https://*.googleapis.com", "ws:", "wss:"],

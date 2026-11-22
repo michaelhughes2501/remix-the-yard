@@ -24,6 +24,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import Auth from './components/Auth';
 import { AppNotification } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -398,6 +399,7 @@ export default function App() {
     <AuthProvider>
       <MainApp />
       <SpeedInsights />
+      <Analytics />
     </AuthProvider>
   );
 }

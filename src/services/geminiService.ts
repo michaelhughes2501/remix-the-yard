@@ -1,7 +1,10 @@
 // Gemini calls go through this app's server (/api/ai/*), so no API key
 // is ever bundled into the browser.
 
-async function post<T>(path: string, body: unknown, fallbackError: string): Promise<T> {
+// Only these same-origin routes are ever called; the type keeps any other URL out.
+type AiRoute = '/api/ai/docket-search' | '/api/ai/estimate-sentence' | '/api/ai/self-help';
+
+async function post<T>(path: AiRoute, body: unknown, fallbackError: string): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

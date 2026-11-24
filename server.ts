@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
+import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -701,7 +702,10 @@ async function startServer() {
   // Mentorship Routes
   app.get("/api/mentors", requireAuth, (req: any, res) => {
     const mentors = db.prepare(`
-      SELECT id, username as name, facility as history, location, bio 
+      SELECT id, username as name,
+        CASE WHEN hide_history = 1 THEN 'Hidden' ELSE facility END as history,
+        CASE WHEN hide_location = 1 THEN 'Hidden' ELSE location END as location,
+        bio
       FROM users 
       WHERE is_mentor = 1 AND id != ?
     `).all(req.userId);
@@ -758,6 +762,12 @@ async function startServer() {
     const mentorship = db.prepare("SELECT * FROM mentorships WHERE id = ?").get(req.params.id) as any;
     
     if (!mentorship) return res.status(404).json({ error: "Not found" });
+    if (mentorship.mentor_id !== req.userId && mentorship.mentee_id !== req.userId) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    if (!['active', 'declined', 'completed'].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
     
     // Only mentor can accept/decline. Both can complete.
     if (status === 'active' || status === 'declined') {
@@ -964,7 +974,7 @@ async function startServer() {
     if (!q || typeof q !== 'string') return res.json({ users: [], jobs: [], housing: [], posts: [] });
     
     const likeQ = `%${q}%`;
-    const users = db.prepare("SELECT id, username as name, bio, location FROM users WHERE username LIKE ? OR bio LIKE ? OR location LIKE ? LIMIT 10").all(likeQ, likeQ, likeQ);
+    const users = db.prepare("SELECT id, username as name, bio, CASE WHEN hide_location = 1 THEN 'Hidden' ELSE location END as location FROM users WHERE username LIKE ? OR bio LIKE ? OR (hide_location = 0 AND location LIKE ?) LIMIT 10").all(likeQ, likeQ, likeQ);
     const jobs = db.prepare("SELECT id, title, company, location FROM jobs WHERE title LIKE ? OR company LIKE ? OR description LIKE ? LIMIT 10").all(likeQ, likeQ, likeQ);
     const housing = db.prepare("SELECT id, name, type, location FROM housing WHERE name LIKE ? OR description LIKE ? OR location LIKE ? LIMIT 10").all(likeQ, likeQ, likeQ);
     const posts = db.prepare("SELECT id, title, content, category FROM threads WHERE title LIKE ? OR content LIKE ? LIMIT 10").all(likeQ, likeQ);
@@ -1215,6 +1225,75 @@ async function startServer() {
       res.json({ reply });
     } catch {
       res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });
+    }
+  });
+
+  // --- Gemini proxy for the Tools / Resources tabs (keeps GEMINI_API_KEY server-side) ---
+  const GEMINI_TOOL_MODEL = "gemini-2.0-flash";
+  const AI_INPUT_MAX = 2000;
+  const readAiField = (body: any, key: string): string | null => {
+    const value = body?.[key];
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > AI_INPUT_MAX) return null;
+    return trimmed;
+  };
+  const getGenAI = () => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    return apiKey ? new GoogleGenAI({ apiKey }) : null;
+  };
+
+  app.post("/api/ai/court-docket", requireAuth, aiLimiter, async (req: any, res) => {
+    const state = readAiField(req.body, "state");
+    const query = readAiField(req.body, "query");
+    if (!state || !query) return res.status(400).json({ error: "state and query are required" });
+    const ai = getGenAI();
+    if (!ai) return res.status(503).json({ error: "AI is not configured (GEMINI_API_KEY missing)" });
+    try {
+      const response = await ai.models.generateContent({
+        model: GEMINI_TOOL_MODEL,
+        contents: `Find the official court docket or case search website for ${state}. Also search for cases related to: ${query}`,
+        config: { tools: [{ googleSearch: {} }] },
+      });
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+      res.json({ text: response.text ?? "", candidates: [{ groundingMetadata: { groundingChunks } }] });
+    } catch (err) {
+      console.error("[ai] court-docket failed", err);
+      res.status(502).json({ error: "AI request failed" });
+    }
+  });
+
+  app.post("/api/ai/sentence-estimate", requireAuth, aiLimiter, async (req: any, res) => {
+    const crimeDetails = readAiField(req.body, "crimeDetails");
+    if (!crimeDetails) return res.status(400).json({ error: "crimeDetails is required" });
+    const ai = getGenAI();
+    if (!ai) return res.status(503).json({ error: "AI is not configured (GEMINI_API_KEY missing)" });
+    try {
+      const response = await ai.models.generateContent({
+        model: GEMINI_TOOL_MODEL,
+        contents: `Act as a legal information assistant. Based on the following crime details, provide a rough estimate of potential sentencing ranges based on common state and federal guidelines. Include a strong disclaimer that this is NOT legal advice. Details: ${crimeDetails}`,
+      });
+      res.json({ text: response.text ?? "" });
+    } catch (err) {
+      console.error("[ai] sentence-estimate failed", err);
+      res.status(502).json({ error: "AI request failed" });
+    }
+  });
+
+  app.post("/api/ai/self-help", requireAuth, aiLimiter, async (req: any, res) => {
+    const topic = readAiField(req.body, "topic");
+    if (!topic) return res.status(400).json({ error: "topic is required" });
+    const ai = getGenAI();
+    if (!ai) return res.status(503).json({ error: "AI is not configured (GEMINI_API_KEY missing)" });
+    try {
+      const response = await ai.models.generateContent({
+        model: GEMINI_TOOL_MODEL,
+        contents: `Provide a supportive, motivational, and practical self-help guide for someone recently released from prison focusing on: ${topic}. Include actionable steps and mental health resources.`,
+      });
+      res.json({ text: response.text ?? "" });
+    } catch (err) {
+      console.error("[ai] self-help failed", err);
+      res.status(502).json({ error: "AI request failed" });
     }
   });
 

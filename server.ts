@@ -8,6 +8,26 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
+import { GoogleGenAI } from "@google/genai";
+
+// Gemini runs only on the server so GEMINI_API_KEY never ships in the browser bundle
+// (same pattern The Yard adopted upstream).
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+function getGeminiClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    const err: any = new Error("GEMINI_API_KEY is not configured.");
+    err.status = 503;
+    throw err;
+  }
+  return new GoogleGenAI({ apiKey });
+}
+function geminiErrorStatus(err: any): { status: number; message: string } {
+  const status = Number(err?.status || err?.code) || 500;
+  if (status === 503) return { status: 503, message: "AI features are not set up on this server yet." };
+  if (status === 429) return { status: 429, message: "AI request limit reached. Please wait a moment and try again." };
+  return { status: 502, message: "The AI service could not answer right now. Please try again." };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1242,6 +1262,57 @@ async function startServer() {
       res.json({ reply });
     } catch {
       res.json({ reply: "I'm here to help with reentry resources. Check the Resources tab for housing, jobs, and legal aid." });
+    }
+  });
+
+  // --- Gemini tools (server-side; the client calls these instead of holding a key) ---
+  app.post("/api/ai/docket-search", aiLimiter, async (req: any, res) => {
+    const { state, query } = req.body || {};
+    if (typeof state !== "string" || !state.trim() || state.length > 60) return res.status(400).json({ error: "State is required." });
+    const q = typeof query === "string" ? query.slice(0, 500) : "";
+    try {
+      const response = await getGeminiClient().models.generateContent({
+        model: GEMINI_MODEL,
+        contents: `Find the official court docket or case search website for ${state}. Also search for cases related to: ${q || "criminal court dockets"}`,
+        config: { tools: [{ googleSearch: {} }] },
+      });
+      res.json({ text: response.text || "", candidates: response.candidates || [] });
+    } catch (err: any) {
+      console.error("AI docket search error:", err?.message);
+      const e = geminiErrorStatus(err);
+      res.status(e.status).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/ai/estimate-sentence", aiLimiter, async (req: any, res) => {
+    const { crimeDetails } = req.body || {};
+    if (typeof crimeDetails !== "string" || !crimeDetails.trim() || crimeDetails.length > 4000) return res.status(400).json({ error: "Offense details are required." });
+    try {
+      const response = await getGeminiClient().models.generateContent({
+        model: GEMINI_MODEL,
+        contents: `Act as a legal information assistant. Based on the following crime details, provide a rough estimate of potential sentencing ranges based on common state and federal guidelines. Include a strong disclaimer that this is NOT legal advice. Details: ${crimeDetails}`,
+      });
+      res.json({ text: response.text || "" });
+    } catch (err: any) {
+      console.error("AI sentence estimate error:", err?.message);
+      const e = geminiErrorStatus(err);
+      res.status(e.status).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/ai/self-help", aiLimiter, async (req: any, res) => {
+    const { topic } = req.body || {};
+    if (typeof topic !== "string" || !topic.trim() || topic.length > 500) return res.status(400).json({ error: "Topic is required." });
+    try {
+      const response = await getGeminiClient().models.generateContent({
+        model: GEMINI_MODEL,
+        contents: `Provide a supportive, motivational, and practical self-help guide for someone recently released from prison focusing on: ${topic}. Include actionable steps and mental health resources.`,
+      });
+      res.json({ text: response.text || "" });
+    } catch (err: any) {
+      console.error("AI self-help error:", err?.message);
+      const e = geminiErrorStatus(err);
+      res.status(e.status).json({ error: e.message });
     }
   });
 

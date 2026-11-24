@@ -1,32 +1,29 @@
-import { GoogleGenAI, Type } from "@google/genai";
+// Gemini calls go through this app's server (/api/ai/*), so no API key
+// is ever bundled into the browser.
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+async function post<T>(path: string, body: unknown, fallbackError: string): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || fallbackError);
+  return data as T;
+}
 
 export const geminiService = {
   async searchCourtDocket(state: string, query: string) {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `Find the official court docket or case search website for ${state}. Also search for cases related to: ${query}`,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
-    });
-    return response;
+    return post<{ text: string; candidates: any[] }>('/api/ai/docket-search', { state, query }, 'Court docket search failed.');
   },
 
   async estimateSentence(crimeDetails: string) {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `Act as a legal information assistant. Based on the following crime details, provide a rough estimate of potential sentencing ranges based on common state and federal guidelines. Include a strong disclaimer that this is NOT legal advice. Details: ${crimeDetails}`,
-    });
-    return response.text;
+    const data = await post<{ text: string }>('/api/ai/estimate-sentence', { crimeDetails }, 'Sentence estimation failed.');
+    return data.text || '';
   },
 
   async getSelfHelpMaterial(topic: string) {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `Provide a supportive, motivational, and practical self-help guide for someone recently released from prison focusing on: ${topic}. Include actionable steps and mental health resources.`,
-    });
-    return response.text;
-  }
+    const data = await post<{ text: string }>('/api/ai/self-help', { topic }, 'Self-help guide generation failed.');
+    return data.text || '';
+  },
 };

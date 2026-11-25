@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Scale, Search, Calculator, AlertTriangle, ExternalLink } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { useAuth } from '../AuthContext';
 import Markdown from 'react-markdown';
 
 export default function Tools() {
+  const { token } = useAuth();
   const [dgetState, setDgetState] = useState('');
   const [dgetQuery, setDgetQuery] = useState('');
   const [dgetResult, setDgetResult] = useState<any>(null);
@@ -17,7 +19,7 @@ export default function Tools() {
     if (!dgetState) return;
     setIsDgetLoading(true);
     try {
-      const response = await geminiService.searchCourtDocket(dgetState, dgetQuery);
+      const response = await geminiService.searchCourtDocket(token, dgetState, dgetQuery);
       setDgetResult(response);
     } catch (error) {
       console.error(error);
@@ -30,7 +32,7 @@ export default function Tools() {
     if (!crimeDetails) return;
     setIsEstimateLoading(true);
     try {
-      const result = await geminiService.estimateSentence(crimeDetails);
+      const result = await geminiService.estimateSentence(token, crimeDetails);
       setEstimateResult(result || '');
     } catch (error) {
       console.error(error);

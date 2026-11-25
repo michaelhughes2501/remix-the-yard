@@ -21,6 +21,7 @@ export default function Tools() {
     if (!dgetState) return;
     setIsDgetLoading(true);
     setDgetError('');
+    setDgetResult(null);
     try {
       const response = await geminiService.searchCourtDocket(token, dgetState, dgetQuery);
       setDgetResult(response);
@@ -36,6 +37,7 @@ export default function Tools() {
     if (!crimeDetails) return;
     setIsEstimateLoading(true);
     setEstimateError('');
+    setEstimateResult('');
     try {
       const result = await geminiService.estimateSentence(token, crimeDetails);
       setEstimateResult(result || '');

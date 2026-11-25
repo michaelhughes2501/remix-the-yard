@@ -137,6 +137,7 @@ export default function Resources() {
     if (!selfHelpTopic) return;
     setIsLoading(true);
     setSelfHelpError('');
+    setSelfHelpContent('');
     try {
       const content = await geminiService.getSelfHelpMaterial(token, selfHelpTopic);
       setSelfHelpContent(content || '');

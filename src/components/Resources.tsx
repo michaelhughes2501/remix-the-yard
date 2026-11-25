@@ -63,6 +63,7 @@ export default function Resources() {
   const [selfHelpTopic, setSelfHelpTopic] = useState('');
   const [selfHelpContent, setSelfHelpContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selfHelpError, setSelfHelpError] = useState('');
 
   const [officers, setOfficers] = useState<ParoleOfficer[]>([]);
   const [showAddPO, setShowAddPO] = useState(false);
@@ -135,11 +136,13 @@ export default function Resources() {
   const handleGetSelfHelp = async () => {
     if (!selfHelpTopic) return;
     setIsLoading(true);
+    setSelfHelpError('');
     try {
       const content = await geminiService.getSelfHelpMaterial(token, selfHelpTopic);
       setSelfHelpContent(content || '');
     } catch (error) {
       console.error(error);
+      setSelfHelpError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -356,6 +359,7 @@ export default function Resources() {
               {isLoading ? 'Generating...' : <>Generate <ArrowRight size={18} /></>}
             </button>
           </div>
+          {selfHelpError && <p role="alert" className="mt-3 text-sm text-red-300">{selfHelpError}</p>}
           
           {selfHelpContent && (
             <motion.div 

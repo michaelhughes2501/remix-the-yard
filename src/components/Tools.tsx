@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
 import { Scale, Search, Calculator, AlertTriangle, ExternalLink } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+import { useAuth } from '../AuthContext';
 import Markdown from 'react-markdown';
 
 export default function Tools() {
+  const { token } = useAuth();
   const [dgetState, setDgetState] = useState('');
   const [dgetQuery, setDgetQuery] = useState('');
   const [dgetResult, setDgetResult] = useState<any>(null);
   const [isDgetLoading, setIsDgetLoading] = useState(false);
+  const [dgetError, setDgetError] = useState('');
 
   const [crimeDetails, setCrimeDetails] = useState('');
   const [estimateResult, setEstimateResult] = useState('');
   const [isEstimateLoading, setIsEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState('');
 
   const handleSearchDocket = async () => {
     if (!dgetState) return;
     setIsDgetLoading(true);
+    setDgetError('');
+    setDgetResult(null);
     try {
-      const response = await geminiService.searchCourtDocket(dgetState, dgetQuery);
+      const response = await geminiService.searchCourtDocket(token, dgetState, dgetQuery);
       setDgetResult(response);
     } catch (error) {
       console.error(error);
+      setDgetError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
     } finally {
       setIsDgetLoading(false);
     }
@@ -29,11 +36,14 @@ export default function Tools() {
   const handleEstimate = async () => {
     if (!crimeDetails) return;
     setIsEstimateLoading(true);
+    setEstimateError('');
+    setEstimateResult('');
     try {
-      const result = await geminiService.estimateSentence(crimeDetails);
+      const result = await geminiService.estimateSentence(token, crimeDetails);
       setEstimateResult(result || '');
     } catch (error) {
       console.error(error);
+      setEstimateError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
     } finally {
       setIsEstimateLoading(false);
     }
@@ -86,6 +96,7 @@ export default function Tools() {
             >
               {isDgetLoading ? 'Searching...' : 'Search Dockets'}
             </button>
+            {dgetError && <p role="alert" className="text-sm text-red-700">{dgetError}</p>}
           </div>
 
           {dgetResult && (
@@ -141,6 +152,7 @@ export default function Tools() {
             >
               {isEstimateLoading ? 'Calculating...' : 'Estimate Sentence'}
             </button>
+            {estimateError && <p role="alert" className="text-sm text-red-300">{estimateError}</p>}
           </div>
 
           {estimateResult && (
